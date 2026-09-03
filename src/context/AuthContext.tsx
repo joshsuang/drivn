@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabaseClient'
 interface AuthContextValue {
   session: Session | null
   loading: boolean
-  sendMagicLink: (email: string) => Promise<{ error: string | null }>
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -20,17 +21,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session)
       setLoading(false)
     })
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
     })
+
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  async function sendMagicLink(email: string) {
-    const { error } = await supabase.auth.signInWithOtp({
+  async function signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      password,
     })
+
+    return { error: error?.message ?? null }
+  }
+
+  async function signUp(email: string, password: string) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+
     return { error: error?.message ?? null }
   }
 
@@ -39,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, loading, sendMagicLink, signOut }}>
+    <AuthContext.Provider value={{ session, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )
