@@ -21,7 +21,7 @@ export function MobileNav() {
     navigate(`${path}?add=1`)
   }
 
-  const [left1, left2, , right1, right2] = mobileTabs
+ const [left1, left2, right1, right2] = mobileTabs
 
   return (
     <>
