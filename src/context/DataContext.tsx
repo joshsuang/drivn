@@ -36,10 +36,14 @@ interface DataContextValue {
   addTrip: (trip: Omit<Trip, 'id'>) => void
   addDocument: (doc: Omit<DocumentItem, 'id'>) => void
   addPhoto: (photo: Omit<Photo, 'id'>) => void
+  deletePhoto: (id: string) => void
   addTimelineEvent: (evt: Omit<TimelineEvent, 'id'>) => void
   addExpense: (expense: Omit<Expense, 'id'>) => void
   updateSettings: (s: Partial<AppSettings>) => void
   resetAll: () => void
+  resetEmpty: () => void
+  deleteTrip: (id: string) => void
+  deleteDocument: (id: string) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -226,6 +230,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       date: doc.date,
       expiration_date: doc.expirationDate ?? null,
       status: doc.status,
+      file_data: doc.fileData ?? null,
     })
     await supabase.from('timeline_events').insert({
       user_id: userId,
@@ -246,8 +251,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
       date: photo.date,
       location: photo.location,
       description: photo.description ?? null,
+      file_data: photo.fileData ?? null,
     })
     showToast('Photo added')
+    reload()
+  }
+
+  async function deletePhoto(id: string) {
+    await supabase.from('photos').delete().eq('id', id)
+    showToast('Photo deleted', 'info')
+    reload()
+  }
+
+  async function deleteTrip(id: string) {
+    await supabase.from('trips').delete().eq('id', id)
+    showToast('Trip deleted', 'info')
+    reload()
+  }
+
+  async function deleteDocument(id: string) {
+    await supabase.from('documents').delete().eq('id', id)
+    showToast('Document deleted', 'info')
     reload()
   }
 
@@ -300,8 +324,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
         maintenance_reminders: merged.maintenanceReminders,
         insurance_reminders: merged.insuranceReminders,
         inspection_reminders: merged.inspectionReminders,
+        avatar_url: merged.avatarUrl ?? null,
       })
       .eq('user_id', userId)
+  }
+
+  async function resetEmpty() {
+    if (!userId) return
+    const tables = [
+      'timeline_events',
+      'fuel_entries',
+      'maintenance_entries',
+      'modifications',
+      'trips',
+      'documents',
+      'photos',
+      'expenses',
+    ]
+    for (const t of tables) {
+      await supabase.from(t).delete().eq('user_id', userId)
+    }
+    showToast('All data cleared', 'info')
+    reload()
   }
 
   async function resetAll() {
@@ -351,10 +395,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addTrip,
         addDocument,
         addPhoto,
+        deletePhoto,
         addTimelineEvent,
         addExpense,
         updateSettings,
         resetAll,
+        resetEmpty,
+        deleteTrip,
+        deleteDocument,
       }}
     >
       {children}

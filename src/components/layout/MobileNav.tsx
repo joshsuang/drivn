@@ -54,23 +54,21 @@ export function MobileNav() {
       )}
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[80] bg-base-900/95 backdrop-blur-lg border-t border-white/5 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+6px)]">
-        <div className="flex items-center justify-between">
-          {[left1, left2].map((item) => (
-            <TabLink key={item.path} {...item} />
-          ))}
+        <div className="grid grid-cols-5 items-center">
+          <TabLink key={left1.path} {...left1} />
+          <TabLink key={left2.path} {...left2} />
 
           <button
             onClick={() => setOpen(true)}
             className="flex flex-col items-center justify-center -mt-5"
           >
-            <div className="w-12 h-12 rounded-full bg-accent shadow-glow flex items-center justify-center active:scale-95 transition-transform">
+            <div className="w-12 h-12 rounded-full bg-accent shadow-glow flex items-center justify-center active:scale-95 transition-transform mx-auto">
               <Plus size={22} className="text-white" />
             </div>
           </button>
 
-          {[right1, right2].map((item) => (
-            <TabLink key={item.path} {...item} />
-          ))}
+          <TabLink key={right1.path} {...right1} />
+          <TabLink key={right2.path} {...right2} />
         </div>
       </nav>
     </>
@@ -83,7 +81,7 @@ function TabLink({ path, icon: Icon, label }: { path: string; icon: typeof Plus;
       to={path}
       end={path === '/'}
       className={({ isActive }) =>
-        `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl min-w-[60px] transition-colors ${
+        `flex flex-col items-center gap-0.5 py-1.5 mx-auto transition-colors ${
           isActive ? 'text-accent-light' : 'text-gray-500'
         }`
       }

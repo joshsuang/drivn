@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Route, Clock, Fuel, Wallet, Map as MapIcon } from 'lucide-react'
+import { Plus, Route, Clock, Fuel, Wallet, Map as MapIcon, Trash2 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useCarData } from '@/context/DataContext'
 import type { Trip } from '@/types'
 import { formatDate, formatDuration, formatCurrency, formatNumber } from '@/lib/format'
+import { belgianCities } from '@/lib/suggestions'
 
 function randomRoute() {
   const points = []
@@ -26,7 +27,7 @@ function randomRoute() {
 }
 
 export default function Trips() {
-  const { data, addTrip } = useCarData()
+  const { data, addTrip, deleteTrip } = useCarData()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
   const [detail, setDetail] = useState<Trip | null>(null)
@@ -107,7 +108,12 @@ export default function Trips() {
             <TextInput value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} />
           </FieldWrap>
           <FieldWrap label="Destination">
-            <TextInput placeholder="e.g. Durbuy" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
+            <TextInput list="be-cities" placeholder="e.g. Durbuy" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
+            <datalist id="be-cities">
+              {belgianCities.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </FieldWrap>
         </div>
         <FieldWrap label="Date">
@@ -132,7 +138,24 @@ export default function Trips() {
         </FieldWrap>
       </Modal>
 
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={detail?.name ?? ''}>
+      <Modal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.name ?? ''}
+        footer={
+          detail && (
+            <Button
+              variant="danger"
+              onClick={() => {
+                deleteTrip(detail.id)
+                setDetail(null)
+              }}
+            >
+              <Trash2 size={14} /> Delete
+            </Button>
+          )
+        }
+      >
         {detail && (
           <div>
             <RouteMap start={detail.start} destination={detail.destination} route={detail.route} className="h-40 w-full mb-4" />

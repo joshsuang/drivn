@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { FieldWrap, TextInput, TextArea } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
 import { formatDate, formatKm, formatCurrency } from '@/lib/format'
+import { maintenanceTypes, garages } from '@/lib/suggestions'
 
 const upcomingIcons = [Droplets, Wrench, FileCheck2, Gauge]
 
@@ -123,7 +124,12 @@ export default function Maintenance() {
         }
       >
         <FieldWrap label="Type">
-          <TextInput placeholder="e.g. Oil change" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} />
+          <TextInput list="maintenance-types" placeholder="e.g. Olie verversen" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} />
+          <datalist id="maintenance-types">
+            {maintenanceTypes.map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
         </FieldWrap>
         <div className="grid grid-cols-2 gap-3">
           <FieldWrap label="Date">
@@ -138,7 +144,12 @@ export default function Maintenance() {
             <TextInput type="number" placeholder="0.00" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
           </FieldWrap>
           <FieldWrap label="Garage">
-            <TextInput placeholder="Garage name" value={form.garage} onChange={(e) => setForm({ ...form, garage: e.target.value })} />
+            <TextInput list="garages" placeholder="Garage name" value={form.garage} onChange={(e) => setForm({ ...form, garage: e.target.value })} />
+            <datalist id="garages">
+              {garages.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
           </FieldWrap>
         </div>
         <FieldWrap label="Next interval (km)" hint="Optional">

@@ -42,8 +42,12 @@ export function Sidebar() {
         to="/settings"
         className="flex items-center gap-3 px-2 py-2.5 mt-4 rounded-xl hover:bg-white/5 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-semibold text-accent-light shrink-0">
-          {data.vehicle.owner.slice(0, 1)}
+        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-semibold text-accent-light shrink-0 overflow-hidden">
+          {data.settings.avatarUrl ? (
+            <img src={data.settings.avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            data.vehicle.owner.slice(0, 1)
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-100 truncate">{data.vehicle.owner}</p>

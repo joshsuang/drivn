@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useCarData } from '@/context/DataContext'
 import type { ModCategory, Modification } from '@/types'
 import { formatDate, formatCurrency } from '@/lib/format'
+import { modificationBrands } from '@/lib/suggestions'
 
 const categories: ModCategory[] = ['Exterior', 'Interior', 'Wheels', 'Performance', 'Lighting', 'Technology']
 
@@ -121,7 +122,12 @@ export default function Modifications() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <FieldWrap label="Brand">
-            <TextInput placeholder="e.g. Maxton Design" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+            <TextInput list="mod-brands" placeholder="e.g. Maxton Design" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+            <datalist id="mod-brands">
+              {modificationBrands.map((b) => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
           </FieldWrap>
           <FieldWrap label="Price (\u20ac)" hint="Optional">
             <TextInput type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />

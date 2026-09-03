@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, FileText, ShieldCheck, ClipboardList, Receipt, BookOpen, File } from 'lucide-react'
+import { Plus, FileText, ShieldCheck, ClipboardList, Receipt, BookOpen, File, Upload, Trash2, Download } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -28,10 +28,21 @@ const statusTone: Record<DocStatus, 'good' | 'warn' | 'bad'> = {
   expired: 'bad',
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function Documents() {
-  const { data, addDocument } = useCarData()
+  const { data, addDocument, deleteDocument } = useCarData()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
+  const [fileData, setFileData] = useState<string | null>(null)
+  const [fileName, setFileName] = useState('')
 
   useEffect(() => {
     if (params.get('add')) {
@@ -47,6 +58,14 @@ export default function Documents() {
     expirationDate: '',
   })
 
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFileName(file.name)
+    const dataUrl = await readFileAsDataUrl(file)
+    setFileData(dataUrl)
+  }
+
   function submit() {
     if (!form.name) return
     addDocument({
@@ -55,8 +74,11 @@ export default function Documents() {
       date: form.date,
       expirationDate: form.expirationDate || undefined,
       status: 'valid',
+      fileData: fileData ?? undefined,
     })
     setOpen(false)
+    setFileData(null)
+    setFileName('')
     setForm({ ...form, name: '', expirationDate: '' })
   }
 
@@ -87,6 +109,23 @@ export default function Documents() {
                 {doc.expirationDate && (
                   <p className="text-xs text-gray-600 mt-0.5">Expires {formatDate(doc.expirationDate)}</p>
                 )}
+                <div className="flex items-center gap-3 mt-2">
+                  {doc.fileData && (
+                    <a
+                      href={doc.fileData}
+                      download={doc.name}
+                      className="flex items-center gap-1 text-[11px] text-accent-light hover:text-accent-light/80"
+                    >
+                      <Download size={12} /> File
+                    </a>
+                  )}
+                  <button
+                    onClick={() => deleteDocument(doc.id)}
+                    className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-bad"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </div>
               </div>
             </Card>
           )
@@ -104,6 +143,13 @@ export default function Documents() {
           </>
         }
       >
+        <FieldWrap label="File" hint="Optional — PDF or image">
+          <label className="flex items-center gap-2.5 border border-dashed border-white/15 rounded-xl px-3.5 py-3 cursor-pointer hover:border-accent/50 transition-colors">
+            <Upload size={16} className="text-gray-500 shrink-0" />
+            <span className="text-xs text-gray-400 truncate">{fileName || 'Tap to attach a file'}</span>
+            <input type="file" accept="application/pdf,image/*" className="hidden" onChange={onPickFile} />
+          </label>
+        </FieldWrap>
         <FieldWrap label="Name">
           <TextInput placeholder="e.g. Insurance policy" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </FieldWrap>

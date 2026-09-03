@@ -65,6 +65,33 @@ export default function Overview() {
   const nextMaintenance = maintenance[0]
   const inspectionDoc = documents.find((d) => d.category === 'Maintenance' && d.expirationDate)
 
+  const mileageChartData = useMemo(() => {
+    if (mileageRange === 'Last year') return mileageByMonth.map((m) => ({ month: m.month, value: m.lastYear ?? 0 }))
+    if (mileageRange === 'All time') {
+      let running = 0
+      return mileageByMonth.map((m) => {
+        running += m.value
+        return { month: m.month, value: running }
+      })
+    }
+    return mileageByMonth.map((m) => ({ month: m.month, value: m.value }))
+  }, [mileageByMonth, mileageRange])
+
+  const mileageTotal = useMemo(() => {
+    if (mileageRange === 'Last year') return mileageByMonth.reduce((s, m) => s + (m.lastYear ?? 0), 0)
+    if (mileageRange === 'All time') return vehicle.currentMileage
+    return totalMileageThisYear
+  }, [mileageByMonth, mileageRange, totalMileageThisYear, vehicle.currentMileage])
+
+  const mileageSublabel = mileageRange === 'Last year' ? 'Total last year' : mileageRange === 'All time' ? 'Total all time' : 'Total this year'
+
+  const fuelChartData = useMemo(() => {
+    if (fuelRange === 'Last 6 months') return consumptionByMonth.slice(-6)
+    return consumptionByMonth
+  }, [consumptionByMonth, fuelRange])
+
+  const fuelSublabel = fuelRange === 'Last 6 months' ? 'Average, last 6 months' : fuelRange === 'This year' ? 'Average this year' : 'Average, all time'
+
   return (
     <div className="fade-in">
       <Header title={`Welcome back, ${vehicle.owner} \uD83D\uDC4B`} subtitle="Here\u2019s your car overview" showWeather />
@@ -126,12 +153,14 @@ export default function Overview() {
             value={formatKm(vehicle.currentMileage)}
             sublabel={`+${formatKm(monthMileage)} this month`}
             trend="up"
+            to="/statistics"
           />
           <StatCard
             icon={Fuel}
             label="Avg. consumption"
             value={`${formatNumber(avgConsumption, 1)} L/100km`}
             sublabel="Last 30 days"
+            to="/fuel"
           />
           <StatCard
             icon={Wallet}
@@ -140,6 +169,7 @@ export default function Overview() {
             label="Total fuel cost"
             value={formatCurrency(totalFuelCost)}
             sublabel="This year"
+            to="/fuel"
           />
           <StatCard
             icon={TrendingUp}
@@ -148,12 +178,14 @@ export default function Overview() {
             label="Cost per km"
             value={formatCurrency(costPerKm)}
             sublabel="This year"
+            to="/statistics"
           />
           <StatCard
             icon={RouteIcon}
             label="Trips"
             value={String(trips.length)}
             sublabel="All time"
+            to="/trips"
           />
           <StatCard
             icon={CalendarDays}
@@ -162,6 +194,7 @@ export default function Overview() {
             label="Days owned"
             value={String(daysOwned)}
             sublabel={`Since ${new Date(vehicle.purchaseDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+            to="/settings"
           />
         </div>
       </div>
@@ -170,14 +203,13 @@ export default function Overview() {
         <ChartCard
           title="Mileage Overview"
           headerRight={<Dropdown options={['This year', 'Last year', 'All time']} value={mileageRange} onChange={setMileageRange} />}
-          value={formatKm(totalMileageThisYear).replace(' km', '')}
+          value={formatKm(mileageTotal).replace(' km', '')}
           valueUnit="km"
-          sublabel="Total this year"
-          trend="\u2191 12% vs last year"
+          sublabel={mileageSublabel}
         >
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mileageByMonth} margin={{ left: -20, right: 8 }}>
+              <LineChart data={mileageChartData} margin={{ left: -20, right: 8 }}>
                 <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
@@ -197,12 +229,11 @@ export default function Overview() {
           headerRight={<Dropdown options={['Last 6 months', 'This year', 'All time']} value={fuelRange} onChange={setFuelRange} />}
           value={formatNumber(avgConsumption, 1)}
           valueUnit="L/100km"
-          sublabel="Average"
-          trend="\u2193 0.3 vs previous 6 months"
+          sublabel={fuelSublabel}
         >
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={consumptionByMonth} margin={{ left: -20, right: 8 }}>
+              <BarChart data={fuelChartData} margin={{ left: -20, right: 8 }}>
                 <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />

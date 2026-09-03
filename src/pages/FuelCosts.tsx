@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
 import { formatDate, formatKm, formatCurrency, formatNumber } from '@/lib/format'
+import { fuelStations } from '@/lib/suggestions'
 
 export default function FuelCosts() {
   const { data, addFuelEntry } = useCarData()
@@ -146,7 +147,12 @@ export default function FuelCosts() {
           </FieldWrap>
         </div>
         <FieldWrap label="Station" hint="Optional">
-          <TextInput placeholder="e.g. Q8 Herentals" value={form.station} onChange={(e) => setForm({ ...form, station: e.target.value })} />
+          <TextInput list="fuel-stations" placeholder="e.g. Q8 Herentals" value={form.station} onChange={(e) => setForm({ ...form, station: e.target.value })} />
+          <datalist id="fuel-stations">
+            {fuelStations.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
         </FieldWrap>
         {form.liters && form.pricePerLiter && (
           <p className="text-xs text-gray-500">

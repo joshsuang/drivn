@@ -10,6 +10,7 @@ export interface Vehicle {
   fuelType: string
   owner: string
   purchaseDate: string
+  deliveryDate?: string
   currentMileage: number
   startingMileage: number
   imageUrl: string
@@ -110,6 +111,7 @@ export interface DocumentItem {
   date: string
   expirationDate?: string
   status: DocStatus
+  fileData?: string
 }
 
 export interface Photo {
@@ -118,6 +120,7 @@ export interface Photo {
   date: string
   location: string
   description?: string
+  fileData?: string
 }
 
 export interface Expense {
@@ -140,6 +143,7 @@ export interface AppSettings {
   maintenanceReminders: boolean
   insuranceReminders: boolean
   inspectionReminders: boolean
+  avatarUrl?: string
 }
 
 export interface CarData {

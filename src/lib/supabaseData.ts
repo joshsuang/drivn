@@ -29,6 +29,7 @@ function vehicleFromRow(r: any): Vehicle {
     fuelType: r.fuel_type,
     owner: r.owner,
     purchaseDate: r.purchase_date,
+    deliveryDate: r.delivery_date ?? undefined,
     currentMileage: r.current_mileage,
     startingMileage: r.starting_mileage,
     imageUrl: r.image_url,
@@ -48,6 +49,7 @@ function vehicleToRow(userId: string, v: Vehicle) {
     fuel_type: v.fuelType,
     owner: v.owner,
     purchase_date: v.purchaseDate,
+    delivery_date: v.deliveryDate ?? null,
     current_mileage: v.currentMileage,
     starting_mileage: v.startingMileage,
     image_url: v.imageUrl,
@@ -132,11 +134,12 @@ function docFromRow(r: any): DocumentItem {
     date: r.date,
     expirationDate: r.expiration_date ?? undefined,
     status: r.status,
+    fileData: r.file_data ?? undefined,
   }
 }
 
 function photoFromRow(r: any): Photo {
-  return { id: r.id, url: r.url, date: r.date, location: r.location, description: r.description ?? undefined }
+  return { id: r.id, url: r.url, date: r.date, location: r.location, description: r.description ?? undefined, fileData: r.file_data ?? undefined }
 }
 
 function expenseFromRow(r: any): Expense {
@@ -150,6 +153,7 @@ function settingsFromRow(r: any): AppSettings {
     maintenanceReminders: r.maintenance_reminders,
     insuranceReminders: r.insurance_reminders,
     inspectionReminders: r.inspection_reminders,
+    avatarUrl: r.avatar_url ?? undefined,
   }
 }
 

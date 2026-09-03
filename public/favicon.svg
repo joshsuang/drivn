@@ -1,7 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#0d0f12"/>
-  <path d="M6 20l1.6-5.2A3 3 0 0110.5 12h11a3 3 0 012.9 2.2L26 20" stroke="#5b6cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="5" y="19" width="22" height="5" rx="2" stroke="#5b6cff" stroke-width="1.8"/>
-  <circle cx="10.5" cy="24" r="1.6" fill="#5b6cff"/>
-  <circle cx="21.5" cy="24" r="1.6" fill="#5b6cff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#171a22"/>
+      <stop offset="100%" stop-color="#0a0b0e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="8" y1="20" x2="56" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c8bff"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <path d="M14 38l4-11.5A6 6 0 0123.7 22h16.6a6 6 0 015.7 4.5L50 38"
+        stroke="url(#accent)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="11" y="36" width="42" height="10.5" rx="5.25" stroke="url(#accent)" stroke-width="3.4"/>
+  <circle cx="21" cy="46.5" r="3" fill="#0a0b0e" stroke="url(#accent)" stroke-width="2.6"/>
+  <circle cx="43" cy="46.5" r="3" fill="#0a0b0e" stroke="url(#accent)" stroke-width="2.6"/>
+  <circle cx="18.5" cy="31" r="1.6" fill="#f5a524"/>
+  <circle cx="45.5" cy="31" r="1.6" fill="#f5a524"/>
 </svg>

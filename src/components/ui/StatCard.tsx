@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +11,7 @@ interface StatCardProps {
   value: string
   sublabel?: string
   trend?: 'up' | 'down' | 'neutral'
+  to?: string
 }
 
 export function StatCard({
@@ -20,9 +22,10 @@ export function StatCard({
   value,
   sublabel,
   trend,
+  to,
 }: StatCardProps) {
-  return (
-    <Card className="flex items-start gap-3.5">
+  const content = (
+    <Card className={cn('flex items-center gap-3.5 h-full', to && 'hover:bg-white/[0.04] transition-colors cursor-pointer')}>
       <div className={cn('rounded-xl p-2.5 shrink-0', iconBg)}>
         <Icon size={18} className={iconColor} />
       </div>
@@ -44,4 +47,13 @@ export function StatCard({
       </div>
     </Card>
   )
+
+  if (to) {
+    return (
+      <Link to={to} className="block h-full">
+        {content}
+      </Link>
+    )
+  }
+  return content
 }

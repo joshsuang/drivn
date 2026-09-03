@@ -1,24 +1,32 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Upload, Trash2 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
 import { formatDate } from '@/lib/format'
+import { belgianCities } from '@/lib/suggestions'
 
-const placeholderPhotos = [
-  'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=900&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=900&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1502877338535-766e1452684a?q=80&w=900&auto=format&fit=crop',
-]
+const fallbackPhoto =
+  'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=900&auto=format&fit=crop'
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 export default function Gallery() {
-  const { data, addPhoto } = useCarData()
+  const { data, addPhoto, deletePhoto } = useCarData()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
   const [lightbox, setLightbox] = useState<number | null>(null)
+  const [fileData, setFileData] = useState<string | null>(null)
 
   useEffect(() => {
     if (params.get('add')) {
@@ -33,14 +41,23 @@ export default function Gallery() {
     description: '',
   })
 
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const dataUrl = await readFileAsDataUrl(file)
+    setFileData(dataUrl)
+  }
+
   function submit() {
     addPhoto({
-      url: placeholderPhotos[Math.floor(Math.random() * placeholderPhotos.length)],
+      url: fileData ?? fallbackPhoto,
+      fileData: fileData ?? undefined,
       date: form.date,
       location: form.location || 'Unknown',
       description: form.description || undefined,
     })
     setOpen(false)
+    setFileData(null)
     setForm({ ...form, location: '', description: '' })
   }
 
@@ -62,7 +79,7 @@ export default function Gallery() {
             className="aspect-square rounded-2xl overflow-hidden bg-base-800 border border-white/5 group"
           >
             <img
-              src={photo.url}
+              src={photo.fileData ?? photo.url}
               alt={photo.description ?? photo.location}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -77,6 +94,15 @@ export default function Gallery() {
             className="absolute top-5 right-5 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10"
           >
             <X size={22} />
+          </button>
+          <button
+            onClick={() => {
+              deletePhoto(data.photos[lightbox].id)
+              setLightbox(null)
+            }}
+            className="absolute top-5 left-5 text-white/70 hover:text-bad p-2 rounded-full hover:bg-white/10"
+          >
+            <Trash2 size={20} />
           </button>
           {lightbox > 0 && (
             <button
@@ -96,7 +122,7 @@ export default function Gallery() {
           )}
           <div className="max-w-3xl w-full px-6">
             <img
-              src={data.photos[lightbox].url}
+              src={data.photos[lightbox].fileData ?? data.photos[lightbox].url}
               alt={data.photos[lightbox].location}
               className="w-full max-h-[70vh] object-contain rounded-2xl"
             />
@@ -122,15 +148,30 @@ export default function Gallery() {
           </>
         }
       >
-        <p className="text-xs text-gray-500 mb-4">
-          This demo uses stock photos to represent uploads. In a full backend build, this would open your device's photo picker.
-        </p>
+        <FieldWrap label="Photo">
+          <label className="flex items-center justify-center gap-2 border border-dashed border-white/15 rounded-xl py-6 cursor-pointer hover:border-accent/50 transition-colors overflow-hidden">
+            {fileData ? (
+              <img src={fileData} alt="preview" className="h-24 rounded-lg object-cover" />
+            ) : (
+              <span className="flex flex-col items-center gap-1.5 text-gray-500">
+                <Upload size={18} />
+                <span className="text-xs">Tap to choose a photo</span>
+              </span>
+            )}
+            <input type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+          </label>
+        </FieldWrap>
         <div className="grid grid-cols-2 gap-3">
           <FieldWrap label="Date">
             <TextInput type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </FieldWrap>
           <FieldWrap label="Location">
-            <TextInput placeholder="e.g. Ardennes" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            <TextInput list="be-cities" placeholder="e.g. Ardennen" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            <datalist id="be-cities">
+              {belgianCities.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </FieldWrap>
         </div>
         <FieldWrap label="Description" hint="Optional">

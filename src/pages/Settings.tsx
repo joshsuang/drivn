@@ -1,19 +1,32 @@
 import { useState } from 'react'
-import { Download, RotateCcw, LogOut } from 'lucide-react'
+import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 const accentColors = ['#5b6cff', '#8b5cf6', '#34d399', '#f5a524', '#f5556c']
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function Settings() {
-  const { data, updateVehicle, updateSettings, resetAll } = useCarData()
-  const { session, signOut } = useAuth()
+  const { data, updateVehicle, updateSettings, resetAll, resetEmpty } = useCarData()
+  const { session, signOut, updatePassword } = useAuth()
+  const { showToast } = useToast()
   const { vehicle, settings } = data
-  const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmReset, setConfirmReset] = useState<'demo' | 'empty' | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
 
   function handleExport() {
     const json = JSON.stringify(data, null, 2)
@@ -26,9 +39,53 @@ export default function Settings() {
     URL.revokeObjectURL(url)
   }
 
+  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const dataUrl = await readFileAsDataUrl(file)
+    updateSettings({ avatarUrl: dataUrl })
+  }
+
+  async function onChangePassword() {
+    if (newPassword.length < 6) {
+      showToast('Password needs at least 6 characters', 'error')
+      return
+    }
+    setPwSaving(true)
+    const { error } = await updatePassword(newPassword)
+    setPwSaving(false)
+    if (error) showToast(error, 'error')
+    else {
+      showToast('Password updated')
+      setNewPassword('')
+    }
+  }
+
   return (
     <div className="fade-in max-w-2xl">
       <Header title="Settings" subtitle="Customize your dashboard" />
+
+      <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-200 mb-4">Profile</h3>
+        <div className="flex items-center gap-4">
+          <label className="relative w-16 h-16 rounded-full overflow-hidden bg-accent/20 flex items-center justify-center cursor-pointer shrink-0 group">
+            {settings.avatarUrl ? (
+              <img src={settings.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg font-semibold text-accent-light">{vehicle.owner.slice(0, 1)}</span>
+            )}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Camera size={16} className="text-white" />
+            </div>
+            <input type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+          </label>
+          <div className="flex-1">
+            <FieldWrap label="Owner name">
+              <TextInput value={vehicle.owner} onChange={(e) => updateVehicle({ owner: e.target.value })} />
+            </FieldWrap>
+          </div>
+        </div>
+      </Card>
 
       <Card className="mb-4">
         <h3 className="text-sm font-semibold text-gray-200 mb-4">Vehicle</h3>
@@ -62,6 +119,12 @@ export default function Settings() {
           </FieldWrap>
           <FieldWrap label="Current mileage">
             <TextInput type="number" value={vehicle.currentMileage} onChange={(e) => updateVehicle({ currentMileage: Number(e.target.value) })} />
+          </FieldWrap>
+          <FieldWrap label="Purchase date">
+            <TextInput type="date" value={vehicle.purchaseDate} onChange={(e) => updateVehicle({ purchaseDate: e.target.value })} />
+          </FieldWrap>
+          <FieldWrap label="Delivery date" hint="Optional">
+            <TextInput type="date" value={vehicle.deliveryDate ?? ''} onChange={(e) => updateVehicle({ deliveryDate: e.target.value || undefined })} />
           </FieldWrap>
         </div>
       </Card>
@@ -99,7 +162,17 @@ export default function Settings() {
 
       <Card className="mb-4">
         <h3 className="text-sm font-semibold text-gray-200 mb-4">Account</h3>
-        <p className="text-xs text-gray-500 mb-3">Signed in as {session?.user.email}. This account syncs your data across every device.</p>
+        <p className="text-xs text-gray-500 mb-4">Signed in as {session?.user.email}. This account syncs your data across every device.</p>
+
+        <FieldWrap label="New password" hint="At least 6 characters">
+          <TextInput type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        </FieldWrap>
+        <div className="flex gap-2 mb-4">
+          <Button variant="secondary" size="sm" onClick={onChangePassword} disabled={pwSaving || !newPassword}>
+            <KeyRound size={13} /> {pwSaving ? 'Updating…' : 'Update password'}
+          </Button>
+        </div>
+
         <Button variant="secondary" onClick={signOut}>
           <LogOut size={14} /> Sign out
         </Button>
@@ -111,18 +184,40 @@ export default function Settings() {
           <Button variant="secondary" onClick={handleExport}>
             <Download size={14} /> Export data
           </Button>
-          {!confirmReset ? (
-            <Button variant="danger" onClick={() => setConfirmReset(true)}>
-              <RotateCcw size={14} /> Reset data
-            </Button>
-          ) : (
+
+          {confirmReset === null && (
+            <>
+              <Button variant="danger" onClick={() => setConfirmReset('demo')}>
+                <RotateCcw size={14} /> Reset to demo data
+              </Button>
+              <Button variant="danger" onClick={() => setConfirmReset('empty')}>
+                <Trash size={14} /> Clear all data (empty)
+              </Button>
+            </>
+          )}
+
+          {confirmReset === 'demo' && (
             <div className="rounded-xl bg-bad/10 border border-bad/20 p-3.5">
               <p className="text-xs text-bad mb-3">This will erase all your changes and restore the demo data. This can't be undone.</p>
               <div className="flex gap-2">
-                <Button variant="danger" size="sm" onClick={() => { resetAll(); setConfirmReset(false) }}>
+                <Button variant="danger" size="sm" onClick={() => { resetAll(); setConfirmReset(null) }}>
                   Confirm reset
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmReset(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {confirmReset === 'empty' && (
+            <div className="rounded-xl bg-bad/10 border border-bad/20 p-3.5">
+              <p className="text-xs text-bad mb-3">This wipes every fuel entry, trip, mod, document and photo. Your vehicle profile stays. This can't be undone.</p>
+              <div className="flex gap-2">
+                <Button variant="danger" size="sm" onClick={() => { resetEmpty(); setConfirmReset(null) }}>
+                  Confirm clear
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmReset(null)}>
                   Cancel
                 </Button>
               </div>
