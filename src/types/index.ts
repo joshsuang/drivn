@@ -1,4 +1,5 @@
 export interface Vehicle {
+  id: string
   make: string
   model: string
   trim: string
@@ -144,6 +145,7 @@ export interface AppSettings {
   insuranceReminders: boolean
   inspectionReminders: boolean
   avatarUrl?: string
+  mobileNavItems?: string[]
 }
 
 export interface CarData {

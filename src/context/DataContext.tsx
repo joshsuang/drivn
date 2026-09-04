@@ -20,14 +20,17 @@ import type {
   Expense,
 } from '@/types'
 import { supabase } from '@/lib/supabaseClient'
-import { fetchCarData, seedIfEmpty, rowMappers } from '@/lib/supabaseData'
+import { fetchCarData, seedIfEmpty, rowMappers, fetchVehicles, addVehicle as addVehicleRow, setActiveVehicle } from '@/lib/supabaseData'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
 
 interface DataContextValue {
   data: CarData
+  vehicles: Vehicle[]
   loading: boolean
   updateVehicle: (v: Partial<Vehicle>) => void
+  addVehicle: (v: Omit<Vehicle, 'id'>) => Promise<void>
+  switchVehicle: (id: string) => Promise<void>
   addFuelEntry: (entry: Omit<FuelEntry, 'id'>) => void
   addMaintenance: (entry: Omit<MaintenanceEntry, 'id'>) => void
   addModification: (mod: Omit<Modification, 'id'>) => void
@@ -44,6 +47,7 @@ interface DataContextValue {
   resetEmpty: () => void
   deleteTrip: (id: string) => void
   deleteDocument: (id: string) => void
+  reload: () => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -53,12 +57,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const userId = session?.user.id
   const { showToast } = useToast()
   const [data, setData] = useState<CarData | null>(null)
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
     if (!userId) return
-    const fresh = await fetchCarData(userId)
+    const [fresh, allVehicles] = await Promise.all([fetchCarData(userId), fetchVehicles(userId)])
     setData(fresh)
+    setVehicles(allVehicles)
     setLoading(false)
   }, [userId])
 
@@ -86,7 +92,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!userId || !data) return
     const merged = { ...data.vehicle, ...v }
     setData((d) => (d ? { ...d, vehicle: merged } : d))
-    await supabase.from('vehicle').update(rowMappers.vehicleToRow(userId, merged)).eq('user_id', userId)
+    await supabase.from('vehicle').update(rowMappers.vehicleToRow(userId, merged)).eq('id', data.vehicle.id)
+  }
+
+  async function addVehicle(v: Omit<Vehicle, 'id'>) {
+    if (!userId) return
+    await addVehicleRow(userId, v)
+    showToast('Car added')
+    reload()
+  }
+
+  async function switchVehicle(id: string) {
+    if (!userId) return
+    await setActiveVehicle(userId, id)
+    reload()
   }
 
   async function addFuelEntry(entry: Omit<FuelEntry, 'id'>) {
@@ -117,7 +136,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       cost: entry.totalCost,
     })
     if (entry.mileage > (data?.vehicle.currentMileage ?? 0)) {
-      await supabase.from('vehicle').update({ current_mileage: entry.mileage }).eq('user_id', userId)
+      await supabase.from('vehicle').update({ current_mileage: entry.mileage }).eq('id', data?.vehicle.id)
     }
     showToast('Fuel entry added')
     reload()
@@ -325,6 +344,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         insurance_reminders: merged.insuranceReminders,
         inspection_reminders: merged.inspectionReminders,
         avatar_url: merged.avatarUrl ?? null,
+        mobile_nav_items: merged.mobileNavItems ? JSON.stringify(merged.mobileNavItems) : null,
       })
       .eq('user_id', userId)
   }
@@ -385,8 +405,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider
       value={{
         data,
+        vehicles,
         loading,
         updateVehicle,
+        addVehicle,
+        switchVehicle,
         addFuelEntry,
         addMaintenance,
         addModification,
@@ -403,6 +426,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         resetEmpty,
         deleteTrip,
         deleteDocument,
+        reload,
       }}
     >
       {children}

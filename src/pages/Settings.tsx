@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash } from 'lucide-react'
+import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -7,6 +7,9 @@ import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import { moreNav, mobileTabs } from '@/lib/nav'
+
+const navChoices = [...mobileTabs.filter((t) => t.path !== '/more'), ...moreNav]
 
 const accentColors = ['#5b6cff', '#8b5cf6', '#34d399', '#f5a524', '#f5556c']
 
@@ -27,6 +30,18 @@ export default function Settings() {
   const [confirmReset, setConfirmReset] = useState<'demo' | 'empty' | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
+  const activeNavPaths = settings.mobileNavItems ?? ['/', '/timeline', '/trips']
+
+  function toggleNavItem(path: string) {
+    const current = settings.mobileNavItems ?? ['/', '/timeline', '/trips']
+    if (current.includes(path)) {
+      if (current.length <= 2) return
+      updateSettings({ mobileNavItems: current.filter((p) => p !== path) })
+    } else {
+      if (current.length >= 3) return
+      updateSettings({ mobileNavItems: [...current, path] })
+    }
+  }
 
   function handleExport() {
     const json = JSON.stringify(data, null, 2)
@@ -44,6 +59,13 @@ export default function Settings() {
     if (!file) return
     const dataUrl = await readFileAsDataUrl(file)
     updateSettings({ avatarUrl: dataUrl })
+  }
+
+  async function onPickCarPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const dataUrl = await readFileAsDataUrl(file)
+    updateVehicle({ imageUrl: dataUrl })
   }
 
   async function onChangePassword() {
@@ -89,6 +111,14 @@ export default function Settings() {
 
       <Card className="mb-4">
         <h3 className="text-sm font-semibold text-gray-200 mb-4">Vehicle</h3>
+        <label className="relative block w-full h-36 rounded-xl overflow-hidden bg-base-800 border border-white/10 cursor-pointer group mb-4">
+          <img src={vehicle.imageUrl} alt={vehicle.model} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+            <Camera size={16} className="text-white" />
+            <span className="text-xs text-white">Change photo</span>
+          </div>
+          <input type="file" accept="image/*" className="hidden" onChange={onPickCarPhoto} />
+        </label>
         <div className="grid grid-cols-2 gap-3">
           <FieldWrap label="Make">
             <TextInput value={vehicle.make} onChange={(e) => updateVehicle({ make: e.target.value })} />
@@ -158,6 +188,31 @@ export default function Settings() {
         <ToggleRow label="Maintenance reminders" checked={settings.maintenanceReminders} onChange={(v) => updateSettings({ maintenanceReminders: v })} />
         <ToggleRow label="Insurance reminders" checked={settings.insuranceReminders} onChange={(v) => updateSettings({ insuranceReminders: v })} />
         <ToggleRow label="Inspection reminders" checked={settings.inspectionReminders} onChange={(v) => updateSettings({ inspectionReminders: v })} last />
+      </Card>
+
+      <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-200 mb-1">Mobile navigation</h3>
+        <p className="text-xs text-gray-500 mb-4">Pick up to 3 tabs for the bottom bar on your phone (“More” always stays as the 4th).</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {navChoices.map((item) => {
+            const active = activeNavPaths.includes(item.path)
+            return (
+              <button
+                key={item.path}
+                onClick={() => toggleNavItem(item.path)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                  active
+                    ? 'bg-accent/15 border-accent/30 text-accent-light'
+                    : 'bg-white/[0.02] border-white/8 text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <item.icon size={14} />
+                <span className="flex-1 text-left truncate">{item.label}</span>
+                {active && <Check size={13} />}
+              </button>
+            )
+          })}
+        </div>
       </Card>
 
       <Card className="mb-4">
@@ -242,10 +297,12 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${checked ? 'bg-accent' : 'bg-base-600'}`}
+      className={`w-11 h-6 rounded-full transition-colors duration-200 relative shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-base-850 ${
+        checked ? 'bg-accent' : 'bg-base-600'
+      }`}
     >
       <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out ${
           checked ? 'translate-x-[22px]' : 'translate-x-0.5'
         }`}
       />

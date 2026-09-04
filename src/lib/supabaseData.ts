@@ -18,6 +18,7 @@ import type {
 
 function vehicleFromRow(r: any): Vehicle {
   return {
+    id: r.id,
     make: r.make,
     model: r.model,
     trim: r.trim,
@@ -154,16 +155,17 @@ function settingsFromRow(r: any): AppSettings {
     insuranceReminders: r.insurance_reminders,
     inspectionReminders: r.inspection_reminders,
     avatarUrl: r.avatar_url ?? undefined,
+    mobileNavItems: r.mobile_nav_items ? JSON.parse(r.mobile_nav_items) : undefined,
   }
 }
 
 // --- seeding ---
 
 export async function seedIfEmpty(userId: string) {
-  const { data: existing } = await supabase.from('vehicle').select('user_id').eq('user_id', userId).maybeSingle()
-  if (existing) return
+  const { data: existing } = await supabase.from('vehicle').select('id').eq('user_id', userId).limit(1)
+  if (existing && existing.length > 0) return
 
-  await supabase.from('vehicle').insert(vehicleToRow(userId, demoData.vehicle))
+  await supabase.from('vehicle').insert({ ...vehicleToRow(userId, demoData.vehicle), is_active: true })
   await supabase.from('app_settings').insert({
     user_id: userId,
     dark_mode: demoData.settings.darkMode,
@@ -267,11 +269,71 @@ export async function seedIfEmpty(userId: string) {
   )
 }
 
+// --- derive chart series from real logs ---
+
+function monthKey(dateStr: string) {
+  return new Date(dateStr).toLocaleString('en-US', { month: 'short' })
+}
+
+const MONTH_ORDER = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function buildMileageByMonth(fuel: FuelEntry[], startingMileage: number) {
+  const sorted = [...fuel].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const byMonth: Record<string, number> = {}
+  let prevMileage = startingMileage
+  for (const f of sorted) {
+    const delta = Math.max(0, f.mileage - prevMileage)
+    const key = monthKey(f.date)
+    byMonth[key] = (byMonth[key] ?? 0) + delta
+    prevMileage = f.mileage
+  }
+  return MONTH_ORDER.map((month) => ({ month, value: byMonth[month] ?? 0, lastYear: 0 }))
+}
+
+function buildConsumptionByMonth(fuel: FuelEntry[]) {
+  const sorted = [...fuel].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const withConsumption = sorted.filter((f) => f.consumption)
+  const byMonth: Record<string, number[]> = {}
+  for (const f of withConsumption) {
+    const key = monthKey(f.date)
+    byMonth[key] = byMonth[key] ?? []
+    byMonth[key].push(f.consumption!)
+  }
+  return Object.keys(byMonth)
+    .sort((a, b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b))
+    .map((month) => ({
+      month,
+      value: byMonth[month].reduce((s, v) => s + v, 0) / byMonth[month].length,
+    }))
+}
+
+// --- multi-vehicle helpers ---
+
+export async function fetchVehicles(userId: string): Promise<Vehicle[]> {
+  const { data } = await supabase.from('vehicle').select('*').eq('user_id', userId).order('purchase_date', { ascending: false })
+  return (data ?? []).map(vehicleFromRow)
+}
+
+export async function addVehicle(userId: string, v: Omit<Vehicle, 'id'>) {
+  await supabase.from('vehicle').update({ is_active: false }).eq('user_id', userId)
+  const { data } = await supabase
+    .from('vehicle')
+    .insert({ ...vehicleToRow(userId, v as Vehicle), is_active: true })
+    .select()
+    .single()
+  return data ? vehicleFromRow(data) : null
+}
+
+export async function setActiveVehicle(userId: string, vehicleId: string) {
+  await supabase.from('vehicle').update({ is_active: false }).eq('user_id', userId)
+  await supabase.from('vehicle').update({ is_active: true }).eq('id', vehicleId)
+}
+
 // --- full fetch ---
 
 export async function fetchCarData(userId: string): Promise<CarData> {
   const [vehicle, settings, timeline, fuel, maintenance, mods, trips, docs, photos, expenses] = await Promise.all([
-    supabase.from('vehicle').select('*').eq('user_id', userId).single(),
+    supabase.from('vehicle').select('*').eq('user_id', userId).eq('is_active', true).limit(1).single(),
     supabase.from('app_settings').select('*').eq('user_id', userId).single(),
     supabase.from('timeline_events').select('*').eq('user_id', userId).order('date', { ascending: false }),
     supabase.from('fuel_entries').select('*').eq('user_id', userId).order('date', { ascending: false }),
@@ -283,20 +345,22 @@ export async function fetchCarData(userId: string): Promise<CarData> {
     supabase.from('expenses').select('*').eq('user_id', userId).order('date', { ascending: false }),
   ])
 
+  const fuelEntries = (fuel.data ?? []).map(fuelFromRow)
+  const vehicleParsed = vehicleFromRow(vehicle.data)
+
   return {
-    vehicle: vehicleFromRow(vehicle.data),
+    vehicle: vehicleParsed,
     settings: settingsFromRow(settings.data),
     timeline: (timeline.data ?? []).map(timelineFromRow),
-    fuelEntries: (fuel.data ?? []).map(fuelFromRow),
+    fuelEntries,
     maintenance: (maintenance.data ?? []).map(maintenanceFromRow),
     modifications: (mods.data ?? []).map(modFromRow),
     trips: (trips.data ?? []).map(tripFromRow),
     documents: (docs.data ?? []).map(docFromRow),
     photos: (photos.data ?? []).map(photoFromRow),
     expenses: (expenses.data ?? []).map(expenseFromRow),
-    // Charts stay derived client-side from demo shape for now — see mileageByMonth/consumptionByMonth below.
-    mileageByMonth: demoData.mileageByMonth,
-    consumptionByMonth: demoData.consumptionByMonth,
+    mileageByMonth: buildMileageByMonth(fuelEntries, vehicleParsed.startingMileage),
+    consumptionByMonth: buildConsumptionByMonth(fuelEntries),
   }
 }
 

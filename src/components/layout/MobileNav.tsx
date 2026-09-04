@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Plus, Fuel, Wrench, Map, Sparkles, Image, Receipt, X } from 'lucide-react'
-import { mobileTabs } from '@/lib/nav'
+import { mobileTabs, moreNav, type NavItem } from '@/lib/nav'
+import { useCarData } from '@/context/DataContext'
+
+const allTabs: NavItem[] = [...mobileTabs.filter((t) => t.path !== '/more'), ...moreNav]
 
 const actions = [
   { label: 'Fuel', icon: Fuel, path: '/fuel', color: 'text-good', bg: 'bg-good/15' },
@@ -13,6 +16,7 @@ const actions = [
 ]
 
 export function MobileNav() {
+  const { data } = useCarData()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
@@ -21,7 +25,11 @@ export function MobileNav() {
     navigate(`${path}?add=1`)
   }
 
- const [left1, left2, right1, right2] = mobileTabs
+  const moreTab = mobileTabs.find((t) => t.path === '/more')!
+  const chosenPaths = data.settings.mobileNavItems ?? ['/', '/timeline', '/trips']
+  const chosen = chosenPaths.map((p) => allTabs.find((t) => t.path === p)).filter(Boolean) as NavItem[]
+  const tabs = [...chosen.slice(0, 3), moreTab]
+  const [left1, left2, right1, right2] = tabs
 
   return (
     <>

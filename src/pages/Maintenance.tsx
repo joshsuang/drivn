@@ -49,12 +49,13 @@ export default function Maintenance() {
     setForm({ ...form, type: '', cost: '', garage: '', notes: '', nextIntervalKm: '' })
   }
 
-  const upcoming = [
-    { title: 'Oil change', sub: `Next in ${formatKm(2340)}` },
-    { title: 'Air filter', sub: `Next in ${formatKm(7500)}` },
-    { title: 'Inspection', sub: '12 Nov 2026' },
-    { title: 'Brake fluid', sub: `Next in ${formatKm(15000)}` },
-  ]
+  const upcoming = data.maintenance
+    .filter((m) => m.nextIntervalKm)
+    .map((m) => ({
+      title: m.type,
+      sub: `Next in ${formatKm(Math.max(0, m.nextIntervalKm! - data.vehicle.currentMileage))}`,
+    }))
+    .slice(0, 4)
 
   return (
     <div className="fade-in">
@@ -68,18 +69,22 @@ export default function Maintenance() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {upcoming.map((u, i) => {
-          const Icon = upcomingIcons[i]
-          return (
-            <Card key={u.title}>
-              <div className="rounded-xl bg-warn/10 p-2.5 w-fit mb-3">
-                <Icon size={17} className="text-warn" />
-              </div>
-              <p className="text-sm font-semibold text-gray-100">{u.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{u.sub}</p>
-            </Card>
-          )
-        })}
+        {upcoming.length === 0 ? (
+          <p className="col-span-full text-sm text-gray-500">No upcoming intervals yet — add a “Next interval (km)” when logging service.</p>
+        ) : (
+          upcoming.map((u, i) => {
+            const Icon = upcomingIcons[i % upcomingIcons.length]
+            return (
+              <Card key={u.title + i}>
+                <div className="rounded-xl bg-warn/10 p-2.5 w-fit mb-3">
+                  <Icon size={17} className="text-warn" />
+                </div>
+                <p className="text-sm font-semibold text-gray-100">{u.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{u.sub}</p>
+              </Card>
+            )
+          })
+        )}
       </div>
 
       <Card padded={false}>

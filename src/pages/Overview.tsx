@@ -64,6 +64,9 @@ export default function Overview() {
   const latestTrip = trips[0]
   const nextMaintenance = maintenance[0]
   const inspectionDoc = documents.find((d) => d.category === 'Maintenance' && d.expirationDate)
+  const insuranceDoc = documents.find((d) => d.category === 'Insurance' && d.expirationDate)
+  const roadTaxExpense = data.expenses.find((e) => e.category === 'Tax')
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
   const mileageChartData = useMemo(() => {
     if (mileageRange === 'Last year') return mileageByMonth.map((m) => ({ month: m.month, value: m.lastYear ?? 0 }))
@@ -111,7 +114,7 @@ export default function Overview() {
             </div>
             <Link
               to="/settings"
-              className="flex items-center gap-1 text-xs font-medium text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3.5 py-1.5 transition-colors shrink-0"
+              className="relative flex items-center gap-1 text-xs font-medium text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3.5 py-1.5 transition-colors shrink-0"
             >
               View profile
               <ChevronRight size={13} />
@@ -253,10 +256,16 @@ export default function Overview() {
             <h3 className="text-[13px] font-medium text-gray-300">Upcoming</h3>
           </div>
           <div className="flex flex-col gap-3.5">
-            <UpcomingRow icon={Wrench} tone="warn" title="Maintenance" sub={nextMaintenance?.type ?? 'Oil change'} value={`in ${formatKm((nextMaintenance?.nextIntervalKm ?? 20790) - vehicle.currentMileage)}`} />
-            <UpcomingRow icon={FileCheck2} tone="accent" title="Inspection" sub="Due date" value={inspectionDoc?.expirationDate ? new Date(inspectionDoc.expirationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '12 Nov 2026'} />
-            <UpcomingRow icon={ShieldCheck} tone="good" title="Insurance" sub="Renewal" value="28 Feb 2027" />
-            <UpcomingRow icon={Landmark} tone="neutral" title="Road tax" sub="Next payment" value="01 Jan 2027" />
+            <UpcomingRow
+              icon={Wrench}
+              tone="warn"
+              title="Maintenance"
+              sub={nextMaintenance?.type ?? 'No service logged yet'}
+              value={nextMaintenance?.nextIntervalKm ? `in ${formatKm(nextMaintenance.nextIntervalKm - vehicle.currentMileage)}` : 'Not set'}
+            />
+            <UpcomingRow icon={FileCheck2} tone="accent" title="Inspection" sub="Due date" value={inspectionDoc?.expirationDate ? fmtDate(inspectionDoc.expirationDate) : 'Not set'} />
+            <UpcomingRow icon={ShieldCheck} tone="good" title="Insurance" sub="Renewal" value={insuranceDoc?.expirationDate ? fmtDate(insuranceDoc.expirationDate) : 'Not set'} />
+            <UpcomingRow icon={Landmark} tone="neutral" title="Road tax" sub="Last payment" value={roadTaxExpense ? fmtDate(roadTaxExpense.date) : 'Not set'} />
           </div>
           <Link
             to="/maintenance"
