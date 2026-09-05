@@ -9,6 +9,7 @@ import {
   FileText,
   Image,
   Settings,
+  Share2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,6 +29,7 @@ export const primaryNav: NavItem[] = [
   { label: 'Trips', path: '/trips', icon: Map },
   { label: 'Documents', path: '/documents', icon: FileText },
   { label: 'Gallery', path: '/gallery', icon: Image },
+  { label: 'Share', path: '/share', icon: Share2 },
   { label: 'Settings', path: '/settings', icon: Settings },
 ]
 

@@ -10,8 +10,9 @@ import { RouteMap } from '@/components/RouteMap'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useCarData } from '@/context/DataContext'
 import type { Trip } from '@/types'
-import { formatDate, formatDuration, formatCurrency, formatNumber } from '@/lib/format'
+import { formatDate, formatDuration, formatCurrency, formatNumber, formatKm } from '@/lib/format'
 import { belgianCities } from '@/lib/suggestions'
+import { useMemo } from 'react'
 
 function randomRoute() {
   const points = []
@@ -69,6 +70,25 @@ export default function Trips() {
     setForm({ ...form, name: '', destination: '', distanceKm: '', durationMinutes: '', consumption: '', fuelCost: '', notes: '' })
   }
 
+  const estimatedLegs = useMemo(() => {
+    const sorted = [...data.fuelEntries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    const legs = []
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]
+      const cur = sorted[i]
+      const distance = cur.mileage - prev.mileage
+      if (distance <= 0) continue
+      legs.push({
+        id: cur.id,
+        from: formatDate(prev.date),
+        to: formatDate(cur.date),
+        distance,
+        cost: cur.totalCost,
+      })
+    }
+    return legs.reverse().slice(0, 8)
+  }, [data.fuelEntries])
+
   return (
     <div className="fade-in">
       <Header title="Trips" subtitle="Your road trips and journeys" />
@@ -86,6 +106,24 @@ export default function Trips() {
           {data.trips.map((trip) => (
             <TripCard key={trip.id} trip={trip} onClick={() => setDetail(trip)} />
           ))}
+        </div>
+      )}
+
+      {estimatedLegs.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-gray-200 mb-1">Estimated driving, from fuel log</h3>
+          <p className="text-xs text-gray-500 mb-3">Distance covered between fill-ups — not real trips, just mileage math.</p>
+          <div className="rounded-2xl card-surface shadow-card divide-y divide-white/5">
+            {estimatedLegs.map((leg) => (
+              <div key={leg.id} className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs text-gray-400">{leg.from} → {leg.to}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-100">{formatKm(leg.distance)}</span>
+                  <span className="text-xs text-gray-500">{formatCurrency(leg.cost)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

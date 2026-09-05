@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { ChevronRight, Car } from 'lucide-react'
+import { ChevronRight, Car, Share2 } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { moreNav } from '@/lib/nav'
 import { useCarData } from '@/context/DataContext'
@@ -19,6 +19,13 @@ export default function More() {
             <span className="block text-sm font-medium text-gray-100">Switch vehicle</span>
             <span className="block text-xs text-gray-500">{data.vehicle.make} {data.vehicle.model}{vehicles.length > 1 ? ` · ${vehicles.length} cars` : ''}</span>
           </div>
+          <ChevronRight size={16} className="text-gray-600" />
+        </NavLink>
+        <NavLink to="/share" className="flex items-center gap-3.5 px-4 py-4 hover:bg-white/[0.03] transition-colors">
+          <div className="rounded-xl bg-white/5 p-2.5">
+            <Share2 size={17} className="text-gray-300" />
+          </div>
+          <span className="flex-1 text-sm font-medium text-gray-100">Share / export PNG</span>
           <ChevronRight size={16} className="text-gray-600" />
         </NavLink>
       </div>

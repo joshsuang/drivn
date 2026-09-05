@@ -19,6 +19,7 @@ import Documents from '@/pages/Documents'
 import Gallery from '@/pages/Gallery'
 import Settings from '@/pages/Settings'
 import More from '@/pages/More'
+import Share from '@/pages/Share'
 
 function AppShell() {
   const { vehicles } = useCarData()
@@ -49,6 +50,7 @@ function AppShell() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/more" element={<More />} />
             <Route path="/vehicles" element={<VehiclePicker onDone={() => navigate('/')} />} />
+            <Route path="/share" element={<Share />} />
           </Routes>
         </PullToRefresh>
       </main>
