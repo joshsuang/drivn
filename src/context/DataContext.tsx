@@ -346,6 +346,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         avatar_url: merged.avatarUrl ?? null,
         mobile_nav_items: merged.mobileNavItems ? JSON.stringify(merged.mobileNavItems) : null,
         vehicle_picker_on_launch: merged.vehiclePickerOnLaunch,
+        fab_style: merged.fabStyle,
       })
       .eq('user_id', userId)
   }
@@ -377,6 +378,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         avatar_url: null,
         mobile_nav_items: null,
         vehicle_picker_on_launch: true,
+        fab_style: 'radial',
       })
       .eq('user_id', userId)
     showToast('Everything cleared — vehicle profile kept', 'info')

@@ -147,6 +147,7 @@ export interface AppSettings {
   avatarUrl?: string
   mobileNavItems?: string[]
   vehiclePickerOnLaunch: boolean
+  fabStyle: 'sheet' | 'radial'
 }
 
 export interface CarData {

@@ -157,6 +157,7 @@ function settingsFromRow(r: any): AppSettings {
     avatarUrl: r.avatar_url ?? undefined,
     mobileNavItems: r.mobile_nav_items ? JSON.parse(r.mobile_nav_items) : undefined,
     vehiclePickerOnLaunch: r.vehicle_picker_on_launch ?? true,
+    fabStyle: r.fab_style === 'sheet' ? 'sheet' : 'radial',
   }
 }
 

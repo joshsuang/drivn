@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check, Share2, ChevronRight } from 'lucide-react'
+import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check, Share2, ChevronRight, Car } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -25,7 +25,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export default function Settings() {
-  const { data, updateVehicle, updateSettings, resetAll, resetEmpty } = useCarData()
+  const { data, vehicles, updateVehicle, updateSettings, resetAll, resetEmpty } = useCarData()
   const { session, signOut, updatePassword } = useAuth()
   const { showToast } = useToast()
   const { vehicle, settings } = data
@@ -37,7 +37,7 @@ export default function Settings() {
   function toggleNavItem(path: string) {
     const current = settings.mobileNavItems ?? ['/', '/timeline', '/trips']
     if (current.includes(path)) {
-      if (current.length <= 3) return
+      if (current.length <= 1) return
       updateSettings({ mobileNavItems: current.filter((p) => p !== path) })
     } else {
       if (current.length >= 3) return
@@ -162,6 +162,33 @@ export default function Settings() {
       </Card>
 
       <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-200 mb-1">Quick-add button style</h3>
+        <p className="text-xs text-gray-500 mb-3">How the mobile “+” button opens.</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => updateSettings({ fabStyle: 'radial' })}
+            className={`flex-1 text-xs font-medium py-2.5 rounded-xl border transition-colors ${
+              settings.fabStyle === 'radial'
+                ? 'bg-accent/15 border-accent/30 text-accent-light'
+                : 'bg-white/[0.02] border-white/8 text-gray-400'
+            }`}
+          >
+            Fan out (new)
+          </button>
+          <button
+            onClick={() => updateSettings({ fabStyle: 'sheet' })}
+            className={`flex-1 text-xs font-medium py-2.5 rounded-xl border transition-colors ${
+              settings.fabStyle === 'sheet'
+                ? 'bg-accent/15 border-accent/30 text-accent-light'
+                : 'bg-white/[0.02] border-white/8 text-gray-400'
+            }`}
+          >
+            Bottom sheet (original)
+          </button>
+        </div>
+      </Card>
+
+      <Card className="mb-4">
         <h3 className="text-sm font-semibold text-gray-200 mb-1">Startup</h3>
         <div className="flex items-center justify-between">
           <div>
@@ -247,6 +274,17 @@ export default function Settings() {
       </Card>
 
       <Card className="mb-4">
+        <Link to="/vehicles" className="flex items-center gap-3 group">
+          <div className="rounded-xl bg-accent/15 p-2.5">
+            <Car size={17} className="text-accent-light" />
+          </div>
+          <div className="flex-1">
+            <span className="block text-sm font-semibold text-gray-200">Switch vehicle</span>
+            <span className="block text-xs text-gray-500">{vehicle.make} {vehicle.model}{vehicles.length > 1 ? ` · ${vehicles.length} cars` : ''}</span>
+          </div>
+          <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+        </Link>
+        <div className="h-px bg-white/5 my-4" />
         <Link to="/share" className="flex items-center gap-3 group">
           <div className="rounded-xl bg-accent/15 p-2.5">
             <Share2 size={17} className="text-accent-light" />
