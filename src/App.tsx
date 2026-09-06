@@ -9,6 +9,7 @@ import { PullToRefresh } from '@/components/PullToRefresh'
 import { VehiclePicker } from '@/pages/VehiclePicker'
 import Login from '@/pages/Login'
 import Overview from '@/pages/Overview'
+import CockpitOverview from '@/pages/CockpitOverview'
 import Timeline from '@/pages/Timeline'
 import Maintenance from '@/pages/Maintenance'
 import FuelCosts from '@/pages/FuelCosts'
@@ -35,13 +36,15 @@ function AppShell() {
     return <VehiclePicker onDone={() => setShowPicker(false)} />
   }
 
+  const OverviewComponent = data.settings.uiTheme === 'cockpit' ? CockpitOverview : Overview
+
   return (
     <div className="flex min-h-screen bg-base-950">
       <Sidebar />
       <main className="flex-1 min-w-0 px-4 md:px-8 pt-6 md:pt-8 pb-24 md:pb-10 max-w-[1600px]">
         <PullToRefresh>
           <Routes>
-            <Route path="/" element={<Overview />} />
+            <Route path="/" element={<OverviewComponent />} />
             <Route path="/timeline" element={<Timeline />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/fuel" element={<FuelCosts />} />

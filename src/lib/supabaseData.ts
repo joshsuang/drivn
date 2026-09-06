@@ -158,6 +158,7 @@ function settingsFromRow(r: any): AppSettings {
     mobileNavItems: r.mobile_nav_items ? JSON.parse(r.mobile_nav_items) : undefined,
     vehiclePickerOnLaunch: r.vehicle_picker_on_launch ?? true,
     fabStyle: r.fab_style === 'sheet' ? 'sheet' : 'radial',
+    uiTheme: r.ui_theme === 'cockpit' ? 'cockpit' : 'classic',
   }
 }
 

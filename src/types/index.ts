@@ -148,6 +148,7 @@ export interface AppSettings {
   mobileNavItems?: string[]
   vehiclePickerOnLaunch: boolean
   fabStyle: 'sheet' | 'radial'
+  uiTheme: 'classic' | 'cockpit'
 }
 
 export interface CarData {

@@ -162,6 +162,33 @@ export default function Settings() {
       </Card>
 
       <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-200 mb-1">Overview style</h3>
+        <p className="text-xs text-gray-500 mb-3">Only the Overview tab changes — rest of the app stays as-is either way.</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => updateSettings({ uiTheme: 'classic' })}
+            className={`flex-1 text-xs font-medium py-2.5 rounded-xl border transition-colors ${
+              settings.uiTheme === 'classic'
+                ? 'bg-accent/15 border-accent/30 text-accent-light'
+                : 'bg-white/[0.02] border-white/8 text-gray-400'
+            }`}
+          >
+            Classic
+          </button>
+          <button
+            onClick={() => updateSettings({ uiTheme: 'cockpit' })}
+            className={`flex-1 text-xs font-medium py-2.5 rounded-xl border transition-colors ${
+              settings.uiTheme === 'cockpit'
+                ? 'bg-bad/15 border-bad/30 text-bad'
+                : 'bg-white/[0.02] border-white/8 text-gray-400'
+            }`}
+          >
+            Cockpit
+          </button>
+        </div>
+      </Card>
+
+      <Card className="mb-4">
         <h3 className="text-sm font-semibold text-gray-200 mb-1">Quick-add button style</h3>
         <p className="text-xs text-gray-500 mb-3">How the mobile “+” button opens.</p>
         <div className="flex gap-2">
