@@ -37,9 +37,19 @@ export function MobileNav() {
     navigate(`${path}?add=1`)
   }
 
+  const DEFAULT_TABS = ['/', '/timeline', '/trips']
   const moreTab = mobileTabs.find((t) => t.path === '/more')!
-  const chosenPaths = data.settings.mobileNavItems ?? ['/', '/timeline', '/trips']
-  const chosen = chosenPaths.map((p) => allTabs.find((t) => t.path === p)).filter(Boolean) as NavItem[]
+  const chosenPaths = data.settings.mobileNavItems ?? DEFAULT_TABS
+  let chosen = chosenPaths.map((p) => allTabs.find((t) => t.path === p)).filter(Boolean) as NavItem[]
+  // Guard against any stored selection shrinking below 3 (old data, a bug, manual edit, etc.) —
+  // pad back up with the defaults so the bottom bar always has exactly 4 slots and never crashes.
+  if (chosen.length < 3) {
+    for (const p of DEFAULT_TABS) {
+      if (chosen.length >= 3) break
+      const fallback = allTabs.find((t) => t.path === p)
+      if (fallback && !chosen.some((c) => c.path === fallback.path)) chosen.push(fallback)
+    }
+  }
   const tabs = [...chosen.slice(0, 3), moreTab]
   const [left1, left2, right1, right2] = tabs
 

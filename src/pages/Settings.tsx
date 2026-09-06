@@ -36,7 +36,7 @@ export default function Settings() {
   function toggleNavItem(path: string) {
     const current = settings.mobileNavItems ?? ['/', '/timeline', '/trips']
     if (current.includes(path)) {
-      if (current.length <= 2) return
+      if (current.length <= 3) return
       updateSettings({ mobileNavItems: current.filter((p) => p !== path) })
     } else {
       if (current.length >= 3) return
