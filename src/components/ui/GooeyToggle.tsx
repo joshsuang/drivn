@@ -10,7 +10,8 @@ const ON_X = W - 10
 const OFF_X = 10
 
 export function GooeyToggle({ checked, onChange }: GooeyToggleProps) {
-  const filterId = useId()
+  const rawId = useId()
+  const filterId = `goo-${rawId.replace(/[^a-zA-Z0-9]/g, '')}`
   const leadX = checked ? ON_X : OFF_X
 
   return (
