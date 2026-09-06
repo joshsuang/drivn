@@ -146,6 +146,7 @@ export interface AppSettings {
   inspectionReminders: boolean
   avatarUrl?: string
   mobileNavItems?: string[]
+  vehiclePickerOnLaunch: boolean
 }
 
 export interface CarData {

@@ -99,13 +99,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!userId) return
     await addVehicleRow(userId, v)
     showToast('Car added')
-    reload()
+    await reload()
   }
 
   async function switchVehicle(id: string) {
     if (!userId) return
     await setActiveVehicle(userId, id)
-    reload()
+    await reload()
   }
 
   async function addFuelEntry(entry: Omit<FuelEntry, 'id'>) {
@@ -345,6 +345,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         inspection_reminders: merged.inspectionReminders,
         avatar_url: merged.avatarUrl ?? null,
         mobile_nav_items: merged.mobileNavItems ? JSON.stringify(merged.mobileNavItems) : null,
+        vehicle_picker_on_launch: merged.vehiclePickerOnLaunch,
       })
       .eq('user_id', userId)
   }

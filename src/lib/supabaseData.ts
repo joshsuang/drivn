@@ -156,6 +156,7 @@ function settingsFromRow(r: any): AppSettings {
     inspectionReminders: r.inspection_reminders,
     avatarUrl: r.avatar_url ?? undefined,
     mobileNavItems: r.mobile_nav_items ? JSON.parse(r.mobile_nav_items) : undefined,
+    vehiclePickerOnLaunch: r.vehicle_picker_on_launch ?? true,
   }
 }
 
@@ -332,8 +333,8 @@ export async function setActiveVehicle(userId: string, vehicleId: string) {
 // --- full fetch ---
 
 export async function fetchCarData(userId: string): Promise<CarData> {
-  const [vehicle, settings, timeline, fuel, maintenance, mods, trips, docs, photos, expenses] = await Promise.all([
-    supabase.from('vehicle').select('*').eq('user_id', userId).eq('is_active', true).limit(1).single(),
+  const [vehicleRes, settings, timeline, fuel, maintenance, mods, trips, docs, photos, expenses] = await Promise.all([
+    supabase.from('vehicle').select('*').eq('user_id', userId).eq('is_active', true).limit(1),
     supabase.from('app_settings').select('*').eq('user_id', userId).single(),
     supabase.from('timeline_events').select('*').eq('user_id', userId).order('date', { ascending: false }),
     supabase.from('fuel_entries').select('*').eq('user_id', userId).order('date', { ascending: false }),
@@ -345,8 +346,19 @@ export async function fetchCarData(userId: string): Promise<CarData> {
     supabase.from('expenses').select('*').eq('user_id', userId).order('date', { ascending: false }),
   ])
 
+  let vehicleRow = vehicleRes.data?.[0] ?? null
+  if (!vehicleRow) {
+    // No active row found (race after a switch, or none flagged yet) — fall back to any vehicle
+    // for this user and mark it active so future loads are consistent.
+    const fallback = await supabase.from('vehicle').select('*').eq('user_id', userId).limit(1)
+    vehicleRow = fallback.data?.[0] ?? null
+    if (vehicleRow) {
+      await supabase.from('vehicle').update({ is_active: true }).eq('id', vehicleRow.id)
+    }
+  }
+
   const fuelEntries = (fuel.data ?? []).map(fuelFromRow)
-  const vehicleParsed = vehicleFromRow(vehicle.data)
+  const vehicleParsed = vehicleRow ? vehicleFromRow(vehicleRow) : vehicleFromRow(demoData.vehicle)
 
   return {
     vehicle: vehicleParsed,

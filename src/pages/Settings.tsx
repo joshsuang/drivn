@@ -3,6 +3,7 @@ import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check } from 'luc
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { GooeyToggle } from '@/components/ui/GooeyToggle'
 import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
@@ -160,10 +161,21 @@ export default function Settings() {
       </Card>
 
       <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-200 mb-1">Startup</h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-gray-300 block">Ask which car on launch</span>
+            <span className="text-xs text-gray-500">Only matters if you have more than one car.</span>
+          </div>
+          <GooeyToggle checked={settings.vehiclePickerOnLaunch} onChange={(v) => updateSettings({ vehiclePickerOnLaunch: v })} />
+        </div>
+      </Card>
+
+      <Card className="mb-4">
         <h3 className="text-sm font-semibold text-gray-200 mb-4">Appearance</h3>
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm text-gray-300">Dark mode</span>
-          <Toggle checked={settings.darkMode} onChange={(v) => updateSettings({ darkMode: v })} />
+          <GooeyToggle checked={settings.darkMode} onChange={(v) => updateSettings({ darkMode: v })} />
         </div>
         <div>
           <span className="text-sm text-gray-300 block mb-2.5">Accent color</span>
@@ -288,24 +300,7 @@ function ToggleRow({ label, checked, onChange, last }: { label: string; checked:
   return (
     <div className={`flex items-center justify-between ${last ? '' : 'mb-4'}`}>
       <span className="text-sm text-gray-300">{label}</span>
-      <Toggle checked={checked} onChange={onChange} />
+      <GooeyToggle checked={checked} onChange={onChange} />
     </div>
-  )
-}
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`w-11 h-6 rounded-full transition-colors duration-200 relative shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-base-850 ${
-        checked ? 'bg-accent' : 'bg-base-600'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out ${
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
   )
 }

@@ -22,10 +22,13 @@ import More from '@/pages/More'
 import Share from '@/pages/Share'
 
 function AppShell() {
-  const { vehicles } = useCarData()
+  const { data, vehicles } = useCarData()
   const navigate = useNavigate()
   const [showPicker, setShowPicker] = useState(
-    () => vehicles.length > 1 && sessionStorage.getItem('drivn.vehicleChosen') !== '1'
+    () =>
+      data.settings.vehiclePickerOnLaunch &&
+      vehicles.length > 1 &&
+      sessionStorage.getItem('drivn.vehicleChosen') !== '1'
   )
 
   if (showPicker) {
