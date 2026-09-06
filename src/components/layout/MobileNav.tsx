@@ -55,8 +55,6 @@ export function MobileNav() {
 
   return (
     <>
-      {open && <div className="md:hidden fixed inset-0 z-[85] bg-black/40 backdrop-blur-[2px]" />}
-
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[80] bg-base-900/95 backdrop-blur-lg border-t border-white/5 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+6px)]">
         <div className="grid grid-cols-5 items-center">
           <TabLink key={left1.path} {...left1} />
