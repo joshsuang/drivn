@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check, Share2, ChevronRight } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -245,6 +246,19 @@ export default function Settings() {
         </Button>
       </Card>
 
+      <Card className="mb-4">
+        <Link to="/share" className="flex items-center gap-3 group">
+          <div className="rounded-xl bg-accent/15 p-2.5">
+            <Share2 size={17} className="text-accent-light" />
+          </div>
+          <div className="flex-1">
+            <span className="block text-sm font-semibold text-gray-200">Share / export PNG</span>
+            <span className="block text-xs text-gray-500">Snapshot your car stats as an image</span>
+          </div>
+          <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+        </Link>
+      </Card>
+
       <Card>
         <h3 className="text-sm font-semibold text-gray-200 mb-4">Data</h3>
         <div className="flex flex-col gap-2.5">
@@ -279,7 +293,7 @@ export default function Settings() {
 
           {confirmReset === 'empty' && (
             <div className="rounded-xl bg-bad/10 border border-bad/20 p-3.5">
-              <p className="text-xs text-bad mb-3">This wipes every fuel entry, trip, mod, document and photo. Your vehicle profile stays. This can't be undone.</p>
+              <p className="text-xs text-bad mb-3">This wipes every fuel entry, trip, mod, document, photo AND resets your app settings (theme, reminders, nav picks) back to default. Your vehicle profile (make, model, mileage, dates) is kept. This can't be undone.</p>
               <div className="flex gap-2">
                 <Button variant="danger" size="sm" onClick={() => { resetEmpty(); setConfirmReset(null) }}>
                   Confirm clear

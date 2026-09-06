@@ -365,8 +365,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     for (const t of tables) {
       await supabase.from(t).delete().eq('user_id', userId)
     }
-    showToast('All data cleared', 'info')
-    reload()
+    // Everything except the vehicle profile itself goes back to defaults — including settings.
+    await supabase
+      .from('app_settings')
+      .update({
+        dark_mode: true,
+        accent_color: '#5b6cff',
+        maintenance_reminders: true,
+        insurance_reminders: true,
+        inspection_reminders: true,
+        avatar_url: null,
+        mobile_nav_items: null,
+        vehicle_picker_on_launch: true,
+      })
+      .eq('user_id', userId)
+    showToast('Everything cleared — vehicle profile kept', 'info')
+    await reload()
   }
 
   async function resetAll() {
