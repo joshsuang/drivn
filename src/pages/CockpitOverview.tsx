@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
 import { useCarData } from '@/context/DataContext'
 import { RadialGauge } from '@/components/cockpit/RadialGauge'
 import { HealthRing } from '@/components/cockpit/HealthRing'
@@ -53,29 +52,26 @@ export default function CockpitOverview() {
   const totalFuelCost = fuelEntries.reduce((s, f) => s + f.totalCost, 0)
 
   return (
-    <div className="fade-in -mx-4 md:-mx-8 -mt-6 md:-mt-8 px-4 md:px-8 pt-6 md:pt-8 min-h-screen" style={{ background: 'radial-gradient(ellipse at top, #14090a 0%, #08090b 60%)' }}>
-      <div className="flex items-center justify-between mb-8">
+    <div className="fade-in -mx-4 md:-mx-6 lg:-mx-8 -mt-6 md:-mt-8 px-4 md:px-6 lg:px-8 pt-6 md:pt-8 min-h-screen" style={{ background: 'radial-gradient(ellipse at top, #14090a 0%, #08090b 60%)' }}>
+      <div className="flex items-center justify-between mb-8 md:hidden">
         <div>
           <p className="text-[11px] tracking-[0.25em] text-gray-500 uppercase">Drivn Cockpit</p>
           <h1 className="text-lg font-bold text-white tracking-tight">{vehicle.make.toUpperCase()} {vehicle.model.toUpperCase()}</h1>
         </div>
-        <Link to="/settings" className="text-[10px] tracking-widest uppercase text-gray-500 hover:text-gray-300 border border-white/10 rounded-full px-3 py-1.5">
-          Classic UI
-        </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] gap-8 items-center justify-items-center mb-10">
-        <RadialGauge value={vehicle.currentMileage} displayValue={vehicle.currentMileage.toLocaleString('en-US')} unit="KM" label="Mileage" max={Math.max(vehicle.currentMileage * 1.15, 20000)} color="#ff5a3c" />
+      <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] gap-6 lg:gap-8 items-center justify-items-center mb-10">
+        <RadialGauge value={vehicle.currentMileage} displayValue={vehicle.currentMileage.toLocaleString('en-US')} unit="KM" label="Mileage" max={Math.max(vehicle.currentMileage * 1.15, 20000)} color="#ff5a3c" size={200} />
 
         <div className="text-center">
-          <img src={vehicle.imageUrl} alt={vehicle.model} className="w-full max-w-md mx-auto object-contain drop-shadow-[0_20px_40px_rgba(255,90,60,0.15)]" />
+          <img src={vehicle.imageUrl} alt={vehicle.model} className="w-full max-w-sm mx-auto object-contain drop-shadow-[0_20px_40px_rgba(255,90,60,0.15)]" />
           <p className="text-2xl font-bold text-white tracking-tight mt-2">{vehicle.make} {vehicle.model}</p>
           <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">
             {vehicle.engine} · {vehicle.power} · {vehicle.transmission} · {vehicle.drive}
           </p>
         </div>
 
-        <HealthRing score={health.score} subsystems={health.subsystems} />
+        <HealthRing score={health.score} subsystems={health.subsystems} size={200} />
       </div>
 
       <div className="mb-10">

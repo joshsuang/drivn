@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { DataProvider, useCarData } from '@/context/DataContext'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { CockpitSidebar } from '@/components/cockpit/CockpitSidebar'
+import { CockpitTopBar } from '@/components/cockpit/CockpitTopBar'
 import { MobileNav } from '@/components/layout/MobileNav'
 import { PullToRefresh } from '@/components/PullToRefresh'
 import { VehiclePicker } from '@/pages/VehiclePicker'
@@ -37,29 +39,33 @@ function AppShell() {
   }
 
   const OverviewComponent = data.settings.uiTheme === 'cockpit' ? CockpitOverview : Overview
+  const isCockpit = data.settings.uiTheme === 'cockpit'
 
   return (
     <div className="flex min-h-screen bg-base-950">
-      <Sidebar />
-      <main className="flex-1 min-w-0 px-4 md:px-8 pt-6 md:pt-8 pb-24 md:pb-10 max-w-[1600px]">
-        <PullToRefresh>
-          <Routes>
-            <Route path="/" element={<OverviewComponent />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/fuel" element={<FuelCosts />} />
-            <Route path="/statistics" element={<Statistics />} />
-            <Route path="/modifications" element={<Modifications />} />
-            <Route path="/trips" element={<Trips />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/gallery" element={<Gallery />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/more" element={<More />} />
-            <Route path="/vehicles" element={<VehiclePicker onDone={() => navigate('/')} />} />
-            <Route path="/share" element={<Share />} />
-          </Routes>
-        </PullToRefresh>
-      </main>
+      {isCockpit ? <CockpitSidebar /> : <Sidebar />}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {isCockpit && <CockpitTopBar />}
+        <main className="flex-1 min-w-0 px-4 md:px-6 lg:px-8 pt-6 md:pt-8 pb-24 md:pb-10 max-w-[1440px] w-full">
+          <PullToRefresh>
+            <Routes>
+              <Route path="/" element={<OverviewComponent />} />
+              <Route path="/timeline" element={<Timeline />} />
+              <Route path="/maintenance" element={<Maintenance />} />
+              <Route path="/fuel" element={<FuelCosts />} />
+              <Route path="/statistics" element={<Statistics />} />
+              <Route path="/modifications" element={<Modifications />} />
+              <Route path="/trips" element={<Trips />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/more" element={<More />} />
+              <Route path="/vehicles" element={<VehiclePicker onDone={() => navigate('/')} />} />
+              <Route path="/share" element={<Share />} />
+            </Routes>
+          </PullToRefresh>
+        </main>
+      </div>
       <MobileNav />
     </div>
   )

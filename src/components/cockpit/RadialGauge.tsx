@@ -6,9 +6,10 @@ interface RadialGaugeProps {
   max: number
   color?: string
   size?: number
+  image?: string
 }
 
-export function RadialGauge({ value, displayValue, unit, label, max, color = '#ff5a3c', size = 220 }: RadialGaugeProps) {
+export function RadialGauge({ value, displayValue, unit, label, max, color = '#ff5a3c', size = 220, image }: RadialGaugeProps) {
   const stroke = 10
   const r = (size - stroke) / 2
   const cx = size / 2
@@ -63,9 +64,17 @@ export function RadialGauge({ value, displayValue, unit, label, max, color = '#f
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[11px] tracking-[0.2em] text-gray-500 font-medium uppercase mb-1">{label}</span>
-        <span className="text-4xl font-bold text-white tabular-nums tracking-tight">{displayValue}</span>
-        <span className="text-xs text-gray-500 uppercase tracking-wide mt-0.5">{unit}</span>
+        {image && (
+          <img
+            src={image}
+            alt=""
+            className="absolute rounded-full object-cover opacity-40"
+            style={{ width: size - 60, height: size - 60, top: 30, left: 30 }}
+          />
+        )}
+        <span className="relative text-[11px] tracking-[0.2em] text-gray-400 font-medium uppercase mb-1">{label}</span>
+        <span className="relative text-4xl font-bold text-white tabular-nums tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{displayValue}</span>
+        <span className="relative text-xs text-gray-300 uppercase tracking-wide mt-0.5 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">{unit}</span>
       </div>
     </div>
   )

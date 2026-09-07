@@ -24,6 +24,8 @@ export function MobileNav() {
   const navigate = useNavigate()
   const wrapRef = useRef<HTMLDivElement>(null)
   const fabStyle = data.settings.fabStyle ?? 'radial'
+  const isCockpit = data.settings.uiTheme === 'cockpit'
+  const activeColor = isCockpit ? '#ff5a3c' : undefined
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -86,8 +88,8 @@ export function MobileNav() {
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[80] bg-base-900 border-t border-white/5 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+6px)]">
         <div className="grid grid-cols-5 items-center">
-          <TabLink key={left1.path} {...left1} />
-          <TabLink key={left2.path} {...left2} />
+          <TabLink key={left1.path} {...left1} activeColor={activeColor} />
+          <TabLink key={left2.path} {...left2} activeColor={activeColor} />
 
           <div ref={wrapRef} className="relative flex items-center justify-center">
             {fabStyle === 'radial' &&
@@ -117,7 +119,14 @@ export function MobileNav() {
 
             <button
               onClick={() => setOpen((o) => !o)}
-              className="relative w-12 h-12 rounded-full bg-gradient-to-br from-accent-light to-purple shadow-glow flex items-center justify-center -mt-5 z-10"
+              className={`relative w-12 h-12 rounded-full flex items-center justify-center -mt-5 z-10 ${
+                isCockpit ? 'shadow-[0_0_20px_rgba(255,90,60,0.5)]' : 'shadow-glow'
+              }`}
+              style={{
+                background: isCockpit
+                  ? 'linear-gradient(135deg, #ff5a3c, #ff8a3c)'
+                  : undefined,
+              }}
               aria-expanded={open}
               aria-label="Quick add"
             >
@@ -132,24 +141,25 @@ export function MobileNav() {
             </button>
           </div>
 
-          <TabLink key={right1.path} {...right1} />
-          <TabLink key={right2.path} {...right2} />
+          <TabLink key={right1.path} {...right1} activeColor={activeColor} />
+          <TabLink key={right2.path} {...right2} activeColor={activeColor} />
         </div>
       </nav>
     </>
   )
 }
 
-function TabLink({ path, icon: Icon, label }: { path: string; icon: typeof Plus; label: string }) {
+function TabLink({ path, icon: Icon, label, activeColor }: { path: string; icon: typeof Plus; label: string; activeColor?: string }) {
   return (
     <NavLink
       to={path}
       end={path === '/'}
       className={({ isActive }) =>
         `flex flex-col items-center gap-0.5 py-1.5 mx-auto transition-colors ${
-          isActive ? 'text-accent-light' : 'text-gray-500'
+          isActive ? (activeColor ? '' : 'text-accent-light') : 'text-gray-500'
         }`
       }
+      style={({ isActive }) => (isActive && activeColor ? { color: activeColor } : undefined)}
     >
       <Icon size={20} strokeWidth={2} />
       <span className="text-[10px] font-medium">{label}</span>
