@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Gauge as GaugeIcon, Fuel, Wrench, Wallet } from 'lucide-react'
 import { useCarData } from '@/context/DataContext'
 import { RadialGauge } from '@/components/cockpit/RadialGauge'
 import { HealthRing } from '@/components/cockpit/HealthRing'
@@ -52,18 +53,31 @@ export default function CockpitOverview() {
   const totalFuelCost = fuelEntries.reduce((s, f) => s + f.totalCost, 0)
 
   return (
-    <div className="fade-in -mx-4 md:-mx-6 lg:-mx-8 -mt-6 md:-mt-8 px-4 md:px-6 lg:px-8 pt-6 md:pt-8 min-h-screen" style={{ background: 'radial-gradient(ellipse at top, #14090a 0%, #08090b 60%)' }}>
-      <div className="flex items-center justify-between mb-8 md:hidden">
+    <div className="fade-in -mx-4 md:-mx-6 lg:-mx-8 -mt-6 md:-mt-8 px-4 md:px-6 lg:px-8 pt-6 md:pt-8 min-h-screen relative overflow-hidden" style={{ background: '#08090b' }}>
+      <div className="pointer-events-none absolute -left-20 top-20 w-72 h-72 rounded-full opacity-20 blur-[80px]" style={{ background: '#ff5a3c' }} />
+      <div className="pointer-events-none absolute -right-20 top-40 w-72 h-72 rounded-full opacity-15 blur-[80px]" style={{ background: '#34d399' }} />
+
+      <div className="relative flex items-center justify-between mb-8 md:hidden">
         <div>
           <p className="text-[11px] tracking-[0.25em] text-gray-500 uppercase">Drivn Cockpit</p>
           <h1 className="text-lg font-bold text-white tracking-tight">{vehicle.make.toUpperCase()} {vehicle.model.toUpperCase()}</h1>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] gap-6 lg:gap-8 items-center justify-items-center mb-10">
-        <RadialGauge value={vehicle.currentMileage} displayValue={vehicle.currentMileage.toLocaleString('en-US')} unit="KM" label="Mileage" max={Math.max(vehicle.currentMileage * 1.15, 20000)} color="#ff5a3c" size={200} />
+      <div className="relative grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] gap-6 lg:gap-8 items-center justify-items-center mb-10">
+        <RadialGauge
+          value={vehicle.currentMileage}
+          displayValue={vehicle.currentMileage.toLocaleString('en-US')}
+          unit="KM"
+          label="Mileage"
+          max={Math.max(vehicle.currentMileage * 1.15, 20000)}
+          color="#ff5a3c"
+          colorEnd="#ff8a3c"
+          size={200}
+          image={vehicle.imageUrl}
+        />
 
-        <div className="text-center">
+        <div className="text-center order-first lg:order-none">
           <img src={vehicle.imageUrl} alt={vehicle.model} className="w-full max-w-sm mx-auto object-contain drop-shadow-[0_20px_40px_rgba(255,90,60,0.15)]" />
           <p className="text-2xl font-bold text-white tracking-tight mt-2">{vehicle.make} {vehicle.model}</p>
           <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">
@@ -71,21 +85,28 @@ export default function CockpitOverview() {
           </p>
         </div>
 
-        <HealthRing score={health.score} subsystems={health.subsystems} size={200} />
+        {/* Desktop: full ring with subsystem list. Mobile: compact pair of mini rings instead. */}
+        <div className="hidden lg:block">
+          <HealthRing score={health.score} subsystems={health.subsystems} size={200} />
+        </div>
+        <div className="flex lg:hidden gap-4">
+          <MiniRing value={health.score} unit="HEALTH" color={health.score >= 80 ? '#34d399' : health.score >= 50 ? '#f5a524' : '#ff5a3c'} />
+          <MiniRing value={range} unit="RANGE KM" color="#4fb8ff" max={800} />
+        </div>
       </div>
 
-      <div className="mb-10">
+      <div className="relative mb-10">
         <TelemetryStrip
           items={[
-            { label: 'Range', value: `${range} km`, color: '#4fb8ff' },
-            { label: 'Consumption', value: `${avgConsumption.toFixed(1)} L/100km` },
-            { label: 'Next service', value: kmLeft !== null ? `${Math.max(0, kmLeft).toLocaleString('en-US')} km` : '—', color: kmLeft !== null && kmLeft < 1000 ? '#f5a524' : undefined },
-            { label: 'Fuel spent', value: formatCurrency(totalFuelCost) },
+            { label: 'Range', value: `${range} km`, color: '#4fb8ff', icon: GaugeIcon },
+            { label: 'Consumption', value: `${avgConsumption.toFixed(1)} L/100km`, icon: Fuel },
+            { label: 'Next service', value: kmLeft !== null ? `${Math.max(0, kmLeft).toLocaleString('en-US')} km` : '—', color: kmLeft !== null && kmLeft < 1000 ? '#f5a524' : undefined, icon: Wrench },
+            { label: 'Fuel spent', value: formatCurrency(totalFuelCost), icon: Wallet },
           ]}
         />
       </div>
 
-      <div>
+      <div className="relative">
         <p className="text-[11px] tracking-[0.25em] text-gray-500 uppercase mb-4">Event Log</p>
         <div className="flex flex-col">
           {timeline.slice(0, 6).map((e, i) => {
@@ -104,6 +125,37 @@ export default function CockpitOverview() {
             )
           })}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function MiniRing({ value, unit, color, max = 100 }: { value: number; unit: string; color: string; max?: number }) {
+  const size = 84
+  const stroke = 7
+  const r = (size - stroke) / 2
+  const circumference = 2 * Math.PI * r
+  const pct = Math.max(0, Math.min(1, value / max))
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - pct)}
+          style={{ filter: `drop-shadow(0 0 5px ${color}aa)` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-base font-bold text-white tabular-nums">{value}</span>
+        <span className="text-[8px] text-gray-500 uppercase tracking-wide">{unit}</span>
       </div>
     </div>
   )

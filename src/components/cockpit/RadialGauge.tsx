@@ -5,11 +5,24 @@ interface RadialGaugeProps {
   label: string
   max: number
   color?: string
+  colorEnd?: string
   size?: number
   image?: string
+  showScale?: boolean
 }
 
-export function RadialGauge({ value, displayValue, unit, label, max, color = '#ff5a3c', size = 220, image }: RadialGaugeProps) {
+export function RadialGauge({
+  value,
+  displayValue,
+  unit,
+  label,
+  max,
+  color = '#ff5a3c',
+  colorEnd,
+  size = 220,
+  image,
+  showScale = true,
+}: RadialGaugeProps) {
   const stroke = 10
   const r = (size - stroke) / 2
   const cx = size / 2
@@ -17,10 +30,11 @@ export function RadialGauge({ value, displayValue, unit, label, max, color = '#f
   const startAngle = -220
   const sweep = 260
   const pct = Math.max(0, Math.min(1, value / max))
+  const gradId = `rg-${label.replace(/\s+/g, '')}-${size}`
 
-  function polar(angleDeg: number) {
+  function polar(angleDeg: number, radius = r) {
     const rad = (angleDeg * Math.PI) / 180
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) }
   }
 
   function arcPath(fromDeg: number, toDeg: number) {
@@ -30,26 +44,31 @@ export function RadialGauge({ value, displayValue, unit, label, max, color = '#f
     return `M ${from.x} ${from.y} A ${r} ${r} 0 ${large} 1 ${to.x} ${to.y}`
   }
 
-  const ticks = Array.from({ length: 13 }, (_, i) => startAngle + (sweep / 12) * i)
+  const tickCount = 13
+  const ticks = Array.from({ length: tickCount }, (_, i) => startAngle + (sweep / (tickCount - 1)) * i)
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <path d={arcPath(startAngle, startAngle + sweep)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} strokeLinecap="round" />
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={color} />
+            <stop offset="100%" stopColor={colorEnd ?? color} />
+          </linearGradient>
+        </defs>
+        <path d={arcPath(startAngle, startAngle + sweep)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} strokeLinecap="round" />
         <path
           d={arcPath(startAngle, startAngle + sweep * pct)}
           fill="none"
-          stroke={color}
+          stroke={`url(#${gradId})`}
           strokeWidth={stroke}
           strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 6px ${color}aa)`, transition: 'all 500ms cubic-bezier(0.22,1,0.36,1)' }}
+          style={{ filter: `drop-shadow(0 0 10px ${color}bb)`, transition: 'all 500ms cubic-bezier(0.22,1,0.36,1)' }}
         />
         {ticks.map((deg, i) => {
           const outer = polar(deg)
-          const inner = {
-            x: cx + (r - 14) * Math.cos((deg * Math.PI) / 180),
-            y: cy + (r - 14) * Math.sin((deg * Math.PI) / 180),
-          }
+          const inner = polar(deg, r - 12)
+          const major = i % 3 === 0
           return (
             <line
               key={i}
@@ -57,11 +76,31 @@ export function RadialGauge({ value, displayValue, unit, label, max, color = '#f
               y1={inner.y}
               x2={outer.x}
               y2={outer.y}
-              stroke="rgba(255,255,255,0.15)"
-              strokeWidth={1.5}
+              stroke={major ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.12)'}
+              strokeWidth={major ? 2 : 1}
             />
           )
         })}
+        {showScale &&
+          ticks
+            .filter((_, i) => i % 3 === 0)
+            .map((deg, i) => {
+              const pos = polar(deg, r - 24)
+              const scaleVal = Math.round((max / (tickCount - 1)) * (i * 3))
+              return (
+                <text
+                  key={i}
+                  x={pos.x}
+                  y={pos.y}
+                  fill="rgba(255,255,255,0.35)"
+                  fontSize={8}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {scaleVal >= 1000 ? `${Math.round(scaleVal / 1000)}k` : scaleVal}
+                </text>
+              )
+            })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {image && (
