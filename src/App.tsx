@@ -14,7 +14,9 @@ import Overview from '@/pages/Overview'
 import CockpitOverview from '@/pages/CockpitOverview'
 import Timeline from '@/pages/Timeline'
 import Maintenance from '@/pages/Maintenance'
+import CockpitMaintenance from '@/pages/CockpitMaintenance'
 import FuelCosts from '@/pages/FuelCosts'
+import CockpitFuelCosts from '@/pages/CockpitFuelCosts'
 import Statistics from '@/pages/Statistics'
 import Modifications from '@/pages/Modifications'
 import Trips from '@/pages/Trips'
@@ -38,8 +40,10 @@ function AppShell() {
     return <VehiclePicker onDone={() => setShowPicker(false)} />
   }
 
-  const OverviewComponent = data.settings.uiTheme === 'cockpit' ? CockpitOverview : Overview
   const isCockpit = data.settings.uiTheme === 'cockpit'
+  const OverviewComponent = isCockpit ? CockpitOverview : Overview
+  const MaintenanceComponent = isCockpit ? CockpitMaintenance : Maintenance
+  const FuelComponent = isCockpit ? CockpitFuelCosts : FuelCosts
 
   return (
     <div className="flex min-h-screen bg-base-950">
@@ -51,8 +55,8 @@ function AppShell() {
             <Routes>
               <Route path="/" element={<OverviewComponent />} />
               <Route path="/timeline" element={<Timeline />} />
-              <Route path="/maintenance" element={<Maintenance />} />
-              <Route path="/fuel" element={<FuelCosts />} />
+              <Route path="/maintenance" element={<MaintenanceComponent />} />
+              <Route path="/fuel" element={<FuelComponent />} />
               <Route path="/statistics" element={<Statistics />} />
               <Route path="/modifications" element={<Modifications />} />
               <Route path="/trips" element={<Trips />} />
