@@ -1,6 +1,17 @@
 node_modules
 dist
 dist-ssr
+# Build artifacts. vite.config.js is emitted from vite.config.ts by `tsc -b`,
+# and Vite resolves the .js first — so committing it means config edits appear
+# to do nothing until the next build regenerates it.
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo
+
 *.local
 .env
+.env.*
+!.env.example
 .DS_Store
+supabase/.temp
+supabase/.branches

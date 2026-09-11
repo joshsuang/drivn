@@ -36,6 +36,9 @@ export interface TimelineEvent {
   mileage?: number
   cost?: number
   imageUrl?: string
+  /** Which table this event was generated from, so it can cascade on edit. */
+  sourceTable?: string
+  sourceId?: string
 }
 
 export interface FuelEntry {
@@ -112,6 +115,11 @@ export interface DocumentItem {
   date: string
   expirationDate?: string
   status: DocStatus
+  /** Path in the private `media` bucket; preferred over the legacy base64. */
+  storagePath?: string
+  /** Signed URL resolved from `storagePath` at fetch time. */
+  fileUrl?: string
+  /** Legacy base64 payload, retained so pre-storage rows still render. */
   fileData?: string
 }
 
@@ -121,6 +129,9 @@ export interface Photo {
   date: string
   location: string
   description?: string
+  /** Path in the private `media` bucket; preferred over the legacy base64. */
+  storagePath?: string
+  /** Legacy base64 payload, retained so pre-storage rows still render. */
   fileData?: string
 }
 

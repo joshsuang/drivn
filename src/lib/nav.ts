@@ -9,6 +9,7 @@ import {
   FileText,
   Image,
   Settings,
+  Bell,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,6 +22,7 @@ export interface NavItem {
 export const primaryNav: NavItem[] = [
   { label: 'Overview', path: '/', icon: LayoutDashboard },
   { label: 'Timeline', path: '/timeline', icon: History },
+  { label: 'Reminders', path: '/reminders', icon: Bell },
   { label: 'Maintenance', path: '/maintenance', icon: Wrench },
   { label: 'Fuel & Costs', path: '/fuel', icon: Fuel },
   { label: 'Statistics', path: '/statistics', icon: BarChart3 },
@@ -39,6 +41,7 @@ export const mobileTabs: NavItem[] = [
 ]
 
 export const moreNav: NavItem[] = [
+  { label: 'Reminders', path: '/reminders', icon: Bell },
   { label: 'Maintenance', path: '/maintenance', icon: Wrench },
   { label: 'Fuel & Costs', path: '/fuel', icon: Fuel },
   { label: 'Statistics', path: '/statistics', icon: BarChart3 },

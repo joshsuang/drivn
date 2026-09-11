@@ -16,17 +16,21 @@ import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { RowActions } from '@/components/ui/RowActions'
 import { FieldWrap, TextInput, Select } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
+import type { Expense } from '@/types'
 import { formatKm, formatCurrency, formatNumber, formatDate } from '@/lib/format'
 
 export default function Statistics() {
-  const { data, addExpense } = useCarData()
+  const { data, addExpense, updateExpense, deleteExpense } = useCarData()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<Expense | null>(null)
 
   useEffect(() => {
     if (params.get('add')) {
+      setEditing(null)
       setOpen(true)
       setParams({}, { replace: true })
     }
@@ -39,10 +43,37 @@ export default function Statistics() {
     cost: '',
   })
 
+  function openAdd() {
+    setEditing(null)
+    setOpen(true)
+  }
+
+  function openEdit(expense: Expense) {
+    setEditing(expense)
+    setForm({
+      date: expense.date,
+      category: expense.category,
+      description: expense.description ?? '',
+      cost: String(expense.cost),
+    })
+    setOpen(true)
+  }
+
   function submit() {
     if (!form.cost) return
-    addExpense({ date: form.date, category: form.category, description: form.description || form.category, cost: Number(form.cost) })
+    const fields = {
+      date: form.date,
+      category: form.category,
+      description: form.description || form.category,
+      cost: Number(form.cost),
+    }
+    if (editing) {
+      void updateExpense(editing.id, fields)
+    } else {
+      void addExpense(fields)
+    }
     setOpen(false)
+    setEditing(null)
     setForm({ ...form, description: '', cost: '' })
   }
 
@@ -94,7 +125,7 @@ export default function Statistics() {
       <Header title="Statistics" subtitle="Stats about your car" />
 
       <div className="flex justify-end mb-4">
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button size="sm" onClick={openAdd}>
           <Plus size={14} /> Add expense
         </Button>
       </div>
@@ -176,12 +207,16 @@ export default function Statistics() {
           </div>
           <div className="divide-y divide-white/5">
             {data.expenses.map((e) => (
-              <div key={e.id} className="flex items-center justify-between px-5 py-3.5">
-                <div>
-                  <p className="text-sm text-gray-100">{e.description}</p>
+              <div key={e.id} className="flex items-center gap-3 px-5 py-3.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-100 truncate">{e.description}</p>
                   <p className="text-xs text-gray-500">{e.category} · {formatDate(e.date)}</p>
                 </div>
-                <span className="text-sm font-medium text-gray-200">{formatCurrency(e.cost)}</span>
+                <span className="text-sm font-medium text-gray-200 whitespace-nowrap">{formatCurrency(e.cost)}</span>
+                <RowActions
+                  onEdit={() => openEdit(e)}
+                  onDelete={() => void deleteExpense(e.id)}
+                />
               </div>
             ))}
           </div>
@@ -191,7 +226,7 @@ export default function Statistics() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Add expense"
+        title={editing ? 'Edit expense' : 'Add expense'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>

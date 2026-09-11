@@ -6,27 +6,25 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
+import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
+import { uploadMedia } from '@/lib/media'
+import { describeDbError } from '@/lib/db'
 import { formatDate } from '@/lib/format'
 import { belgianCities } from '@/lib/suggestions'
 
 const fallbackPhoto =
   'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=900&auto=format&fit=crop'
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 export default function Gallery() {
   const { data, addPhoto, deletePhoto } = useCarData()
+  const { session } = useAuth()
+  const { showToast } = useToast()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
   const [lightbox, setLightbox] = useState<number | null>(null)
-  const [fileData, setFileData] = useState<string | null>(null)
+  const [uploaded, setUploaded] = useState<{ path: string; url: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (params.get('add')) {
@@ -43,21 +41,31 @@ export default function Gallery() {
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const dataUrl = await readFileAsDataUrl(file)
-    setFileData(dataUrl)
+    if (!file || !session?.user.id) return
+    setUploading(true)
+    try {
+      // Upload on pick rather than on save: the image is already in storage by
+      // the time the user hits Save, so the insert stays fast.
+      setUploaded(await uploadMedia(session.user.id, file, 'photo'))
+    } catch (error) {
+      showToast(describeDbError(error, 'Upload failed'), 'error')
+    } finally {
+      setUploading(false)
+    }
   }
 
   function submit() {
-    addPhoto({
-      url: fileData ?? fallbackPhoto,
-      fileData: fileData ?? undefined,
+    void addPhoto({
+      // The stored row keeps the path; `url` here is the signed preview that
+      // shows immediately, and is replaced on the next fetch.
+      url: uploaded?.url ?? fallbackPhoto,
+      storagePath: uploaded?.path,
       date: form.date,
       location: form.location || 'Unknown',
       description: form.description || undefined,
     })
     setOpen(false)
-    setFileData(null)
+    setUploaded(null)
     setForm({ ...form, location: '', description: '' })
   }
 
@@ -65,10 +73,9 @@ export default function Gallery() {
     <div className="fade-in">
       <Header title="Gallery" subtitle="Your car in every moment" />
 
-      <div className="flex justify-end mb-4">
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus size={14} /> Add photo
-        </Button>
+      <div className="flex justify-end mb-4">          <Button size="sm" onClick={() => setOpen(true)}>
+            <Plus size={14} /> Add photo
+          </Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -79,7 +86,7 @@ export default function Gallery() {
             className="aspect-square rounded-2xl overflow-hidden bg-base-800 border border-white/5 group"
           >
             <img
-              src={photo.fileData ?? photo.url}
+              src={photo.url}
               alt={photo.description ?? photo.location}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -122,7 +129,7 @@ export default function Gallery() {
           )}
           <div className="max-w-3xl w-full px-6">
             <img
-              src={data.photos[lightbox].fileData ?? data.photos[lightbox].url}
+              src={data.photos[lightbox].url}
               alt={data.photos[lightbox].location}
               className="w-full max-h-[70vh] object-contain rounded-2xl"
             />
@@ -150,12 +157,14 @@ export default function Gallery() {
       >
         <FieldWrap label="Photo">
           <label className="flex items-center justify-center gap-2 border border-dashed border-white/15 rounded-xl py-6 cursor-pointer hover:border-accent/50 transition-colors overflow-hidden">
-            {fileData ? (
-              <img src={fileData} alt="preview" className="h-24 rounded-lg object-cover" />
+            {uploaded?.url ? (
+              <img src={uploaded.url} alt="preview" className="h-24 rounded-lg object-cover" />
             ) : (
               <span className="flex flex-col items-center gap-1.5 text-gray-500">
                 <Upload size={18} />
-                <span className="text-xs">Tap to choose a photo</span>
+                <span className="text-xs">
+                  {uploading ? 'Uploading…' : 'Tap to choose a photo'}
+                </span>
               </span>
             )}
             <input type="file" accept="image/*" className="hidden" onChange={onPickFile} />

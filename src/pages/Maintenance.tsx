@@ -1,42 +1,77 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Wrench, Droplets, FileCheck2, Gauge } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { RowActions } from '@/components/ui/RowActions'
+import { MaintenanceEntryDetailView } from '@/components/EntryDetail'
 import { FieldWrap, TextInput, TextArea } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
+import { buildMaintenanceEntryDetail } from '@/lib/entryDetail'
+import type { MaintenanceEntry } from '@/types'
+import { buildReminders } from '@/lib/reminders'
+import { SEVERITY_TEXT, SEVERITY_TONE } from '@/components/ReminderRow'
 import { formatDate, formatKm, formatCurrency } from '@/lib/format'
 import { maintenanceTypes, garages } from '@/lib/suggestions'
 
 const upcomingIcons = [Droplets, Wrench, FileCheck2, Gauge]
 
-export default function Maintenance() {
-  const { data, addMaintenance } = useCarData()
-  const [params, setParams] = useSearchParams()
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (params.get('add')) {
-      setOpen(true)
-      setParams({}, { replace: true })
-    }
-  }, [params, setParams])
-
-  const [form, setForm] = useState({
+function emptyForm(mileage: number) {
+  return {
     type: '',
     date: new Date().toISOString().slice(0, 10),
-    mileage: String(data.vehicle.currentMileage),
+    mileage: String(mileage),
     cost: '',
     garage: '',
     notes: '',
     nextIntervalKm: '',
-  })
+  }
+}
+
+export default function Maintenance() {
+  const { data, addMaintenance, updateMaintenance, deleteMaintenance } = useCarData()
+  const [params, setParams] = useSearchParams()
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<MaintenanceEntry | null>(null)
+  // Held by id so the drill-down recomputes from live data rather than a copy.
+  const [detailId, setDetailId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (params.get('add')) {
+      setEditing(null)
+      setForm(emptyForm(data.vehicle.currentMileage))
+      setOpen(true)
+      setParams({}, { replace: true })
+    }
+  }, [params, setParams, data.vehicle.currentMileage])
+
+  const [form, setForm] = useState(() => emptyForm(data.vehicle.currentMileage))
+
+  function openAdd() {
+    setEditing(null)
+    setForm(emptyForm(data.vehicle.currentMileage))
+    setOpen(true)
+  }
+
+  function openEdit(entry: MaintenanceEntry) {
+    setEditing(entry)
+    setForm({
+      type: entry.type,
+      date: entry.date,
+      mileage: String(entry.mileage),
+      cost: String(entry.cost),
+      garage: entry.garage ?? '',
+      notes: entry.notes ?? '',
+      nextIntervalKm: entry.nextIntervalKm ? String(entry.nextIntervalKm) : '',
+    })
+    setOpen(true)
+  }
 
   function submit() {
     if (!form.type || !form.date) return
-    addMaintenance({
+    const fields = {
       type: form.type,
       date: form.date,
       mileage: Number(form.mileage) || 0,
@@ -44,18 +79,28 @@ export default function Maintenance() {
       garage: form.garage || 'Unknown garage',
       notes: form.notes || undefined,
       nextIntervalKm: form.nextIntervalKm ? Number(form.nextIntervalKm) : undefined,
-    })
+    }
+    if (editing) {
+      void updateMaintenance(editing.id, fields)
+    } else {
+      void addMaintenance(fields)
+    }
     setOpen(false)
+    setEditing(null)
     setForm({ ...form, type: '', cost: '', garage: '', notes: '', nextIntervalKm: '' })
   }
 
-  const upcoming = data.maintenance
-    .filter((m) => m.nextIntervalKm)
-    .map((m) => ({
-      title: m.type,
-      sub: `Next in ${formatKm(Math.max(0, m.nextIntervalKm! - data.vehicle.currentMileage))}`,
-    }))
-    .slice(0, 4)
+  // Derived the same way as the bell and the Reminders page, so a service due by
+  // date shows up here too — it used to only ever look at the km interval.
+  const upcoming = useMemo(
+    () => buildReminders(data).filter((reminder) => reminder.kind === 'maintenance'),
+    [data],
+  )
+
+  const detail = useMemo(
+    () => (detailId ? buildMaintenanceEntryDetail(data, detailId) : null),
+    [data, detailId],
+  )
 
   return (
     <div className="fade-in">
@@ -63,24 +108,29 @@ export default function Maintenance() {
 
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-200">Upcoming</h3>
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button size="sm" onClick={openAdd}>
           <Plus size={14} /> Add maintenance
         </Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {upcoming.length === 0 ? (
-          <p className="col-span-full text-sm text-gray-500">No upcoming intervals yet — add a “Next interval (km)” when logging service.</p>
+          <p className="col-span-full text-sm text-gray-500">No upcoming intervals yet — add a “Next interval (km)” or a next date when logging a service.</p>
         ) : (
-          upcoming.map((u, i) => {
+          upcoming.slice(0, 4).map((reminder, i) => {
             const Icon = upcomingIcons[i % upcomingIcons.length]
             return (
-              <Card key={u.title + i}>
-                <div className="rounded-xl bg-warn/10 p-2.5 w-fit mb-3">
-                  <Icon size={17} className="text-warn" />
+              <Card key={reminder.id}>
+                <div className={`rounded-xl p-2.5 w-fit mb-3 ${SEVERITY_TONE[reminder.severity]}`}>
+                  <Icon size={17} />
                 </div>
-                <p className="text-sm font-semibold text-gray-100">{u.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{u.sub}</p>
+                <p className="text-sm font-semibold text-gray-100">{reminder.title}</p>
+                <p className={`text-xs mt-0.5 ${SEVERITY_TEXT[reminder.severity]}`}>
+                  {reminder.detail}
+                </p>
+                {reminder.secondary && (
+                  <p className="text-[11px] text-gray-600 mt-0.5">{reminder.secondary}</p>
+                )}
               </Card>
             )
           })
@@ -100,16 +150,30 @@ export default function Maintenance() {
                 <th className="px-5 py-3 font-medium">Mileage</th>
                 <th className="px-5 py-3 font-medium">Cost</th>
                 <th className="px-5 py-3 font-medium hidden sm:table-cell">Garage</th>
+                <th className="px-5 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.maintenance.map((m) => (
-                <tr key={m.id} className="border-t border-white/5 hover:bg-white/[0.02]">
+                <tr
+                  key={m.id}
+                  onClick={() => setDetailId(m.id)}
+                  className="border-t border-white/5 hover:bg-white/[0.02] cursor-pointer"
+                >
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatDate(m.date)}</td>
                   <td className="px-5 py-3.5 text-gray-100 font-medium">{m.type}</td>
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatKm(m.mileage)}</td>
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatCurrency(m.cost)}</td>
                   <td className="px-5 py-3.5 text-gray-500 hidden sm:table-cell">{m.garage}</td>
+                  <td
+                    className="px-5 py-3.5 text-right whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <RowActions
+                      onEdit={() => openEdit(m)}
+                      onDelete={() => void deleteMaintenance(m.id)}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -118,9 +182,30 @@ export default function Maintenance() {
       </Card>
 
       <Modal
+        open={detailId !== null}
+        onClose={() => setDetailId(null)}
+        title="Service details"
+      >
+        {detail ? (
+          <MaintenanceEntryDetailView
+            detail={detail}
+            onEdit={() => {
+              const entry = detail.entry
+              setDetailId(null)
+              openEdit(entry)
+            }}
+          />
+        ) : (
+          <p className="text-sm text-gray-500">
+            This service is no longer available — it may have been deleted on another device.
+          </p>
+        )}
+      </Modal>
+
+      <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Add maintenance"
+        title={editing ? 'Edit maintenance' : 'Add maintenance'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>

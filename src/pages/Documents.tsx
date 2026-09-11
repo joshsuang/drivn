@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, FileText, ShieldCheck, ClipboardList, Receipt, BookOpen, File, Upload, Trash2, Download } from 'lucide-react'
+import { Plus, FileText, ShieldCheck, ClipboardList, Receipt, BookOpen, File, Upload, Download } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
+import { RowActions } from '@/components/ui/RowActions'
 import { FieldWrap, TextInput, Select } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
-import type { DocCategory, DocStatus } from '@/types'
+import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
+import { describeDbError } from '@/lib/db'
+import { deleteMedia, uploadMedia } from '@/lib/media'
+import { deriveDocStatus } from '@/lib/reminders'
+import type { DocCategory, DocStatus, DocumentItem } from '@/types'
 import { formatDate } from '@/lib/format'
 
 const categories: DocCategory[] = ['Insurance', 'Registration', 'Maintenance', 'Invoice', 'Manual', 'Other']
@@ -28,56 +34,106 @@ const statusTone: Record<DocStatus, 'good' | 'warn' | 'bad'> = {
   expired: 'bad',
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+function emptyForm() {
+  return {
+    name: '',
+    category: 'Other' as DocCategory,
+    date: new Date().toISOString().slice(0, 10),
+    expirationDate: '',
+  }
 }
 
 export default function Documents() {
-  const { data, addDocument, deleteDocument } = useCarData()
+  const { data, addDocument, updateDocument, deleteDocument } = useCarData()
+  const { session } = useAuth()
+  const { showToast } = useToast()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
-  const [fileData, setFileData] = useState<string | null>(null)
+  const [uploaded, setUploaded] = useState<{ path: string; url: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [fileName, setFileName] = useState('')
+  const [editing, setEditing] = useState<DocumentItem | null>(null)
 
   useEffect(() => {
     if (params.get('add')) {
+      setEditing(null)
+      setUploaded(null)
+      setFileName('')
+      setForm(emptyForm())
       setOpen(true)
       setParams({}, { replace: true })
     }
   }, [params, setParams])
 
-  const [form, setForm] = useState({
-    name: '',
-    category: 'Other' as DocCategory,
-    date: new Date().toISOString().slice(0, 10),
-    expirationDate: '',
-  })
+  const [form, setForm] = useState(emptyForm)
+
+  function openAdd() {
+    setEditing(null)
+    setUploaded(null)
+    setFileName('')
+    setForm(emptyForm())
+    setOpen(true)
+  }
+
+  function openEdit(doc: DocumentItem) {
+    setEditing(doc)
+    setUploaded(null)
+    setFileName('')
+    setForm({
+      name: doc.name,
+      category: doc.category,
+      date: doc.date,
+      expirationDate: doc.expirationDate ?? '',
+    })
+    setOpen(true)
+  }
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !session?.user.id) return
     setFileName(file.name)
-    const dataUrl = await readFileAsDataUrl(file)
-    setFileData(dataUrl)
+    setUploading(true)
+    try {
+      setUploaded(await uploadMedia(session.user.id, file, 'document'))
+    } catch (error) {
+      showToast(describeDbError(error, 'Upload failed'), 'error')
+    } finally {
+      setUploading(false)
+    }
   }
 
   function submit() {
     if (!form.name) return
-    addDocument({
+    const fields = {
       name: form.name,
       category: form.category,
       date: form.date,
       expirationDate: form.expirationDate || undefined,
-      status: 'valid',
-      fileData: fileData ?? undefined,
-    })
+      // Stored for reference only — reads recompute it from the date, so this
+      // can never go stale the way it used to.
+      status: deriveDocStatus(form.expirationDate || undefined),
+    }
+    if (editing) {
+      // Keep the stored file unless a new one was attached.
+      void updateDocument(editing.id, {
+        ...fields,
+        storagePath: uploaded?.path ?? editing.storagePath,
+        fileUrl: uploaded?.url ?? editing.fileUrl,
+      })
+      // Replacing a file leaves the old object behind unless we sweep it up.
+      if (uploaded?.path && editing.storagePath && editing.storagePath !== uploaded.path) {
+        void deleteMedia(editing.storagePath)
+      }
+    } else {
+      void addDocument({
+        ...fields,
+        storagePath: uploaded?.path,
+        fileUrl: uploaded?.url,
+      })
+    }
     setOpen(false)
-    setFileData(null)
+    setEditing(null)
+    setUploaded(null)
     setFileName('')
     setForm({ ...form, name: '', expirationDate: '' })
   }
@@ -87,7 +143,7 @@ export default function Documents() {
       <Header title="Documents" subtitle="Insurance, registration, invoices and manuals" />
 
       <div className="flex justify-end mb-4">
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button size="sm" onClick={openAdd}>
           <Plus size={14} /> Add document
         </Button>
       </div>
@@ -110,21 +166,19 @@ export default function Documents() {
                   <p className="text-xs text-gray-600 mt-0.5">Expires {formatDate(doc.expirationDate)}</p>
                 )}
                 <div className="flex items-center gap-3 mt-2">
-                  {doc.fileData && (
+                  {(doc.fileUrl || doc.fileData) && (
                     <a
-                      href={doc.fileData}
+                      href={doc.fileUrl ?? doc.fileData}
                       download={doc.name}
                       className="flex items-center gap-1 text-[11px] text-accent-light hover:text-accent-light/80"
                     >
                       <Download size={12} /> File
                     </a>
                   )}
-                  <button
-                    onClick={() => deleteDocument(doc.id)}
-                    className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-bad"
-                  >
-                    <Trash2 size={12} /> Delete
-                  </button>
+                  <RowActions
+                    onEdit={() => openEdit(doc)}
+                    onDelete={() => void deleteDocument(doc.id)}
+                  />
                 </div>
               </div>
             </Card>
@@ -135,7 +189,7 @@ export default function Documents() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Add document"
+        title={editing ? 'Edit document' : 'Add document'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
@@ -146,7 +200,9 @@ export default function Documents() {
         <FieldWrap label="File" hint="Optional — PDF or image">
           <label className="flex items-center gap-2.5 border border-dashed border-white/15 rounded-xl px-3.5 py-3 cursor-pointer hover:border-accent/50 transition-colors">
             <Upload size={16} className="text-gray-500 shrink-0" />
-            <span className="text-xs text-gray-400 truncate">{fileName || 'Tap to attach a file'}</span>
+            <span className="text-xs text-gray-400 truncate">
+              {uploading ? 'Uploading…' : fileName || 'Tap to attach a file'}
+            </span>
             <input type="file" accept="application/pdf,image/*" className="hidden" onChange={onPickFile} />
           </label>
         </FieldWrap>

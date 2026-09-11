@@ -8,8 +8,6 @@ import {
   Route as RouteIcon,
   CalendarDays,
   Wrench,
-  ShieldCheck,
-  FileCheck2,
   Landmark,
   ChevronRight,
 } from 'lucide-react'
@@ -33,11 +31,13 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { TimelineItem } from '@/components/TimelineItem'
 import { ModificationCard } from '@/components/ModificationCard'
 import { RouteMap } from '@/components/RouteMap'
+import { KIND_ICON } from '@/components/ReminderRow'
+import { activeReminders, buildReminders, KIND_LABEL, type ReminderSeverity } from '@/lib/reminders'
 import { formatKm, formatCurrency, formatNumber, formatDuration, daysBetween } from '@/lib/format'
 
 export default function Overview() {
   const { data } = useCarData()
-  const { vehicle, mileageByMonth, consumptionByMonth, timeline, trips, modifications, maintenance, documents } = data
+  const { vehicle, mileageByMonth, consumptionByMonth, timeline, trips, modifications } = data
   const [mileageRange, setMileageRange] = useState('This year')
   const [fuelRange, setFuelRange] = useState('Last 6 months')
 
@@ -62,9 +62,12 @@ export default function Overview() {
   const costPerKm = totalMileageThisYear > 0 ? totalFuelCost / totalMileageThisYear : 0
   const daysOwned = daysBetween(vehicle.purchaseDate)
   const latestTrip = trips[0]
-  const nextMaintenance = maintenance[0]
-  const inspectionDoc = documents.find((d) => d.category === 'Maintenance' && d.expirationDate)
-  const insuranceDoc = documents.find((d) => d.category === 'Insurance' && d.expirationDate)
+  // The soonest-due items across services, inspections and insurance — not just
+  // the most recently logged service, which is what this used to show.
+  const dueSoon = useMemo(
+    () => activeReminders(buildReminders(data), data.settings).slice(0, 3),
+    [data],
+  )
   const roadTaxExpense = data.expenses.find((e) => e.category === 'Tax')
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -256,22 +259,29 @@ export default function Overview() {
             <h3 className="text-[13px] font-medium text-gray-300">Upcoming</h3>
           </div>
           <div className="flex flex-col gap-3.5">
-            <UpcomingRow
-              icon={Wrench}
-              tone="warn"
-              title="Maintenance"
-              sub={nextMaintenance?.type ?? 'No service logged yet'}
-              value={nextMaintenance?.nextIntervalKm ? `in ${formatKm(nextMaintenance.nextIntervalKm - vehicle.currentMileage)}` : 'Not set'}
-            />
-            <UpcomingRow icon={FileCheck2} tone="accent" title="Inspection" sub="Due date" value={inspectionDoc?.expirationDate ? fmtDate(inspectionDoc.expirationDate) : 'Not set'} />
-            <UpcomingRow icon={ShieldCheck} tone="good" title="Insurance" sub="Renewal" value={insuranceDoc?.expirationDate ? fmtDate(insuranceDoc.expirationDate) : 'Not set'} />
+            {dueSoon.map((reminder) => (
+              <UpcomingRow
+                key={reminder.id}
+                icon={KIND_ICON[reminder.kind]}
+                tone={TONE_FOR_SEVERITY[reminder.severity]}
+                title={reminder.title}
+                sub={KIND_LABEL[reminder.kind]}
+                value={reminder.detail}
+                valueTone={reminder.severity}
+              />
+            ))}
+            {dueSoon.length === 0 && (
+              <p className="text-xs text-gray-500">
+                Nothing due yet — log a service interval or a document expiry to see it here.
+              </p>
+            )}
             <UpcomingRow icon={Landmark} tone="neutral" title="Road tax" sub="Last payment" value={roadTaxExpense ? fmtDate(roadTaxExpense.date) : 'Not set'} />
           </div>
           <Link
-            to="/maintenance"
+            to="/reminders"
             className="block text-center text-xs font-medium text-accent-light hover:text-accent-light/80 mt-4 py-2 rounded-xl bg-white/[0.03] hover:bg-white/5 transition-colors"
           >
-            View all
+            View all reminders
           </Link>
         </Card>
       </div>
@@ -334,24 +344,38 @@ export default function Overview() {
   )
 }
 
+const TONE_FOR_SEVERITY: Record<ReminderSeverity, 'warn' | 'accent' | 'good' | 'neutral' | 'bad'> = {
+  overdue: 'bad',
+  'due-soon': 'warn',
+  upcoming: 'neutral',
+}
+
 function UpcomingRow({
   icon: Icon,
   tone,
   title,
   sub,
   value,
+  valueTone = 'upcoming',
 }: {
   icon: typeof Wrench
-  tone: 'warn' | 'accent' | 'good' | 'neutral'
+  tone: 'warn' | 'accent' | 'good' | 'neutral' | 'bad'
   title: string
   sub: string
   value: string
+  valueTone?: ReminderSeverity
 }) {
   const tones = {
     warn: 'bg-warn/15 text-warn',
     accent: 'bg-accent/15 text-accent-light',
     good: 'bg-good/15 text-good',
+    bad: 'bg-bad/15 text-bad',
     neutral: 'bg-white/10 text-gray-300',
+  }
+  const valueTones: Record<ReminderSeverity, string> = {
+    overdue: 'text-bad',
+    'due-soon': 'text-warn',
+    upcoming: 'text-gray-400',
   }
   return (
     <div className="flex items-center gap-3">
@@ -359,10 +383,10 @@ function UpcomingRow({
         <Icon size={15} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-100">{title}</p>
+        <p className="text-sm font-medium text-gray-100 truncate">{title}</p>
         <p className="text-xs text-gray-500">{sub}</p>
       </div>
-      <span className="text-xs text-gray-400 shrink-0">{value}</span>
+      <span className={`text-xs shrink-0 ${valueTones[valueTone]}`}>{value}</span>
     </div>
   )
 }

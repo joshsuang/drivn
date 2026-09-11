@@ -10,6 +10,7 @@ import { RouteMap } from '@/components/RouteMap'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useCarData } from '@/context/DataContext'
 import type { Trip } from '@/types'
+import { Pencil } from 'lucide-react'
 import { formatDate, formatDuration, formatCurrency, formatNumber, formatKm } from '@/lib/format'
 import { belgianCities } from '@/lib/suggestions'
 import { useMemo } from 'react'
@@ -27,20 +28,8 @@ function randomRoute() {
   return points
 }
 
-export default function Trips() {
-  const { data, addTrip, deleteTrip } = useCarData()
-  const [params, setParams] = useSearchParams()
-  const [open, setOpen] = useState(false)
-  const [detail, setDetail] = useState<Trip | null>(null)
-
-  useEffect(() => {
-    if (params.get('add')) {
-      setOpen(true)
-      setParams({}, { replace: true })
-    }
-  }, [params, setParams])
-
-  const [form, setForm] = useState({
+function emptyForm() {
+  return {
     name: '',
     start: 'Herentals',
     destination: '',
@@ -50,11 +39,53 @@ export default function Trips() {
     consumption: '',
     fuelCost: '',
     notes: '',
-  })
+  }
+}
+
+export default function Trips() {
+  const { data, addTrip, updateTrip, deleteTrip } = useCarData()
+  const [params, setParams] = useSearchParams()
+  const [open, setOpen] = useState(false)
+  const [detail, setDetail] = useState<Trip | null>(null)
+  const [editing, setEditing] = useState<Trip | null>(null)
+
+  useEffect(() => {
+    if (params.get('add')) {
+      setEditing(null)
+      setForm(emptyForm())
+      setOpen(true)
+      setParams({}, { replace: true })
+    }
+  }, [params, setParams])
+
+  const [form, setForm] = useState(emptyForm)
+
+  function openAdd() {
+    setEditing(null)
+    setForm(emptyForm())
+    setOpen(true)
+  }
+
+  function openEdit(trip: Trip) {
+    setEditing(trip)
+    setForm({
+      name: trip.name,
+      start: trip.start,
+      destination: trip.destination,
+      date: trip.date,
+      distanceKm: String(trip.distanceKm),
+      durationMinutes: String(trip.durationMinutes),
+      consumption: String(trip.consumption),
+      fuelCost: String(trip.fuelCost),
+      notes: trip.notes ?? '',
+    })
+    setDetail(null)
+    setOpen(true)
+  }
 
   function submit() {
     if (!form.name || !form.destination) return
-    addTrip({
+    const fields = {
       name: form.name,
       start: form.start,
       destination: form.destination,
@@ -64,9 +95,16 @@ export default function Trips() {
       consumption: Number(form.consumption) || 0,
       fuelCost: Number(form.fuelCost) || 0,
       notes: form.notes || undefined,
-      route: randomRoute(),
-    })
+    }
+    if (editing) {
+      // Keep the existing stylised route — regenerating it would move the map
+      // every time an unrelated field changed.
+      void updateTrip(editing.id, fields)
+    } else {
+      void addTrip({ ...fields, route: randomRoute() })
+    }
     setOpen(false)
+    setEditing(null)
     setForm({ ...form, name: '', destination: '', distanceKm: '', durationMinutes: '', consumption: '', fuelCost: '', notes: '' })
   }
 
@@ -94,7 +132,7 @@ export default function Trips() {
       <Header title="Trips" subtitle="Your road trips and journeys" />
 
       <div className="flex justify-end mb-4">
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button size="sm" onClick={openAdd}>
           <Plus size={14} /> Add trip
         </Button>
       </div>
@@ -130,7 +168,7 @@ export default function Trips() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Add trip"
+        title={editing ? 'Edit trip' : 'Add trip'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
@@ -182,15 +220,20 @@ export default function Trips() {
         title={detail?.name ?? ''}
         footer={
           detail && (
-            <Button
-              variant="danger"
-              onClick={() => {
-                deleteTrip(detail.id)
-                setDetail(null)
-              }}
-            >
-              <Trash2 size={14} /> Delete
-            </Button>
+            <>
+              <Button variant="ghost" onClick={() => openEdit(detail)}>
+                <Pencil size={14} /> Edit
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  void deleteTrip(detail.id)
+                  setDetail(null)
+                }}
+              >
+                <Trash2 size={14} /> Delete
+              </Button>
+            </>
           )
         }
       >

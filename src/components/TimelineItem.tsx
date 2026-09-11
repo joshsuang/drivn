@@ -6,9 +6,11 @@ interface TimelineItemProps {
   event: TimelineEvent
   onClick?: () => void
   isLast?: boolean
+  /** Marks the one event an entry generated, when shown in its own context. */
+  highlight?: boolean
 }
 
-export function TimelineItem({ event, onClick, isLast }: TimelineItemProps) {
+export function TimelineItem({ event, onClick, isLast, highlight }: TimelineItemProps) {
   const meta = eventMeta[event.type]
   const Icon = meta.icon
 
@@ -19,14 +21,21 @@ export function TimelineItem({ event, onClick, isLast }: TimelineItemProps) {
     >
       <div className="flex flex-col items-center shrink-0">
         <div
-          className={`rounded-full p-2.5 ${meta.bg} border border-white/5 group-hover:scale-105 transition-transform`}
+          className={`rounded-full p-2.5 ${meta.bg} border group-hover:scale-105 transition-transform ${
+            highlight ? 'border-accent/50 ring-2 ring-accent/20' : 'border-white/5'
+          }`}
         >
           <Icon size={16} className={meta.color} />
         </div>
         {!isLast && <div className="w-px flex-1 bg-white/10 my-1" />}
       </div>
       <div className="pb-6 min-w-0 flex-1">
-        <p className="text-[11px] text-gray-500 mb-0.5">{formatDate(event.date)}</p>
+        <p className="text-[11px] text-gray-500 mb-0.5">
+          {formatDate(event.date)}
+          {highlight && (
+            <span className="text-accent-light font-medium ml-1.5">this entry</span>
+          )}
+        </p>
         <p className="text-sm font-medium text-gray-100 group-hover:text-accent-light transition-colors truncate">
           {event.title}
         </p>

@@ -5,6 +5,8 @@ export const CAR_IMAGE =
 
 export const demoData: CarData = {
   vehicle: {
+    // Placeholder id — real rows get a uuid from the database.
+    id: 'demo-vehicle',
     make: 'Ford',
     model: 'Puma',
     trim: 'Titanium',
@@ -105,11 +107,20 @@ export const demoData: CarData = {
     { id: 'f-7', date: '2026-08-30', liters: 44.3, pricePerLiter: 1.70, totalCost: 75.31, mileage: 18450, consumption: 5.6, fullTank: true, station: 'Total Herentals' },
   ],
 
+  // Intervals are what the Reminders feature runs on, so the seed data exercises
+  // all three states rather than sitting permanently quiet:
+  //   m-4 has a distance interval still ahead but a time interval already passed
+  //       (oil changes are typically "every 15,000 km or 12 months"), so it is
+  //       overdue on the date alone — exactly what the old km-only view missed;
+  //   m-5 is due soon on both counts.
+  // m-1 carries no interval: a one-off first service would otherwise read as
+  // permanently overdue once the odometer moved past its 15,000 km mark.
   maintenance: [
-    { id: 'm-1', date: '2026-03-15', type: 'First service', mileage: 5120, cost: 245, garage: 'Ford Herentals', nextIntervalKm: 15000 },
+    { id: 'm-1', date: '2026-03-15', type: 'First service', mileage: 5120, cost: 245, garage: 'Ford Herentals' },
     { id: 'm-2', date: '2026-06-20', type: 'Air filter', mileage: 12345, cost: 45, garage: 'Ford Herentals', nextIntervalKm: 30000 },
     { id: 'm-3', date: '2026-07-05', type: 'Spark plugs', mileage: 12345, cost: 73.50, garage: 'Ford Herentals', nextIntervalKm: 40000 },
-    { id: 'm-4', date: '2026-08-30', type: 'Oil change', mileage: 18450, cost: 120, garage: 'Ford Herentals', notes: 'Fully synthetic 5W-30', nextIntervalKm: 20790 },
+    { id: 'm-4', date: '2026-08-30', type: 'Oil change', mileage: 18450, cost: 120, garage: 'Ford Herentals', notes: 'Fully synthetic 5W-30', nextIntervalKm: 20790, nextIntervalDate: '2026-09-05' },
+    { id: 'm-5', date: '2026-08-30', type: 'Tyre rotation', mileage: 18450, cost: 0, garage: 'Ford Herentals', nextIntervalKm: 19200, nextIntervalDate: '2026-10-01' },
   ],
 
   modifications: [
@@ -279,5 +290,8 @@ export const demoData: CarData = {
     maintenanceReminders: true,
     insuranceReminders: true,
     inspectionReminders: true,
+    vehiclePickerOnLaunch: true,
+    fabStyle: 'radial',
+    uiTheme: 'classic',
   },
 }

@@ -6,30 +6,66 @@ import { Card } from '@/components/ui/Card'
 import { StatCard } from '@/components/ui/StatCard'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { RowActions } from '@/components/ui/RowActions'
+import { FuelEntryDetailView } from '@/components/EntryDetail'
 import { FieldWrap, TextInput } from '@/components/ui/FormField'
 import { useCarData } from '@/context/DataContext'
+import { buildFuelEntryDetail } from '@/lib/entryDetail'
+import type { FuelEntry } from '@/types'
 import { formatDate, formatKm, formatCurrency, formatNumber } from '@/lib/format'
 import { fuelStations } from '@/lib/suggestions'
 
+function emptyForm(mileage: number) {
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    liters: '',
+    pricePerLiter: '1.72',
+    mileage: String(mileage),
+    station: '',
+  }
+}
+
 export default function FuelCosts() {
-  const { data, addFuelEntry } = useCarData()
+  const { data, addFuelEntry, updateFuelEntry, deleteFuelEntry } = useCarData()
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<FuelEntry | null>(null)
+  // Held by id, not by value: a sync from another device would leave a stored
+  // copy stale, and a delete would leave a ghost.
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   useEffect(() => {
     if (params.get('add')) {
+      setEditing(null)
       setOpen(true)
       setParams({}, { replace: true })
     }
   }, [params, setParams])
 
-  const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    liters: '',
-    pricePerLiter: '1.72',
-    mileage: String(data.vehicle.currentMileage),
-    station: '',
-  })
+  const [form, setForm] = useState(() => emptyForm(data.vehicle.currentMileage))
+
+  function openAdd() {
+    setEditing(null)
+    setForm(emptyForm(data.vehicle.currentMileage))
+    setOpen(true)
+  }
+
+  function openEdit(entry: FuelEntry) {
+    setEditing(entry)
+    setForm({
+      date: entry.date,
+      liters: String(entry.liters),
+      pricePerLiter: String(entry.pricePerLiter),
+      mileage: String(entry.mileage),
+      station: entry.station ?? '',
+    })
+    setOpen(true)
+  }
+
+  const detail = useMemo(
+    () => (detailId ? buildFuelEntryDetail(data, detailId) : null),
+    [data, detailId],
+  )
 
   const totals = useMemo(() => {
     const entries = data.fuelEntries
@@ -50,23 +86,25 @@ export default function FuelCosts() {
     const mileage = Number(form.mileage)
     if (!liters || !price || !mileage) return
 
-    const previous = data.fuelEntries[0]
-    const consumption =
-      previous && mileage > previous.mileage
-        ? (liters / (mileage - previous.mileage)) * 100
-        : undefined
-
-    addFuelEntry({
+    const fields = {
       date: form.date,
       liters,
       pricePerLiter: price,
       totalCost: liters * price,
       mileage,
-      consumption,
       station: form.station || undefined,
       fullTank: true,
-    })
+    }
+
+    if (editing) {
+      // Consumption is re-derived from the surrounding fill-ups, not from this
+      // form, so an edit can't leave the chain inconsistent.
+      void updateFuelEntry(editing.id, fields)
+    } else {
+      void addFuelEntry(fields)
+    }
     setOpen(false)
+    setEditing(null)
     setForm({ ...form, liters: '', station: '' })
   }
 
@@ -85,7 +123,7 @@ export default function FuelCosts() {
       <Card padded={false}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <h3 className="text-sm font-semibold text-gray-200">Fuel history</h3>
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={openAdd}>
             <Plus size={14} /> Add fuel
           </Button>
         </div>
@@ -99,11 +137,16 @@ export default function FuelCosts() {
                 <th className="px-5 py-3 font-medium">Total</th>
                 <th className="px-5 py-3 font-medium">Mileage</th>
                 <th className="px-5 py-3 font-medium hidden md:table-cell">Consumption</th>
+                <th className="px-5 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.fuelEntries.map((f) => (
-                <tr key={f.id} className="border-t border-white/5 hover:bg-white/[0.02]">
+                <tr
+                  key={f.id}
+                  onClick={() => setDetailId(f.id)}
+                  className="border-t border-white/5 hover:bg-white/[0.02] cursor-pointer"
+                >
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatDate(f.date)}</td>
                   <td className="px-5 py-3.5 text-gray-100">{formatNumber(f.liters, 1)} L</td>
                   <td className="px-5 py-3.5 text-gray-400 hidden sm:table-cell">{formatNumber(f.pricePerLiter, 2)}</td>
@@ -111,6 +154,16 @@ export default function FuelCosts() {
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatKm(f.mileage)}</td>
                   <td className="px-5 py-3.5 text-gray-400 hidden md:table-cell">
                     {f.consumption ? `${formatNumber(f.consumption, 1)} L/100km` : '—'}
+                  </td>
+                  <td
+                    className="px-5 py-3.5 text-right whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <RowActions
+                      onEdit={() => openEdit(f)}
+                      onDelete={() => void deleteFuelEntry(f.id)}
+                      deleteLabel="Delete"
+                    />
                   </td>
                 </tr>
               ))}
@@ -120,9 +173,30 @@ export default function FuelCosts() {
       </Card>
 
       <Modal
+        open={detailId !== null}
+        onClose={() => setDetailId(null)}
+        title="Fill-up details"
+      >
+        {detail ? (
+          <FuelEntryDetailView
+            detail={detail}
+            onEdit={() => {
+              const entry = detail.entry
+              setDetailId(null)
+              openEdit(entry)
+            }}
+          />
+        ) : (
+          <p className="text-sm text-gray-500">
+            This fill-up is no longer available — it may have been deleted on another device.
+          </p>
+        )}
+      </Modal>
+
+      <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Add fuel"
+        title={editing ? 'Edit fuel entry' : 'Add fuel'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>

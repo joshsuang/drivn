@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check, Share2, ChevronRight, Car } from 'lucide-react'
+import { Download, RotateCcw, LogOut, KeyRound, Camera, Trash, Check, Share2, ChevronRight, Car, CloudUpload } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -10,28 +10,24 @@ import { useCarData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { moreNav, mobileTabs } from '@/lib/nav'
+import { uploadMedia } from '@/lib/media'
+import { describeDbError } from '@/lib/db'
+import { migrateMedia, type MigrationProgress } from '@/lib/mediaMigration'
 
 const navChoices = [...mobileTabs.filter((t) => t.path !== '/more'), ...moreNav]
 
 const accentColors = ['#5b6cff', '#8b5cf6', '#34d399', '#f5a524', '#f5556c']
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 export default function Settings() {
-  const { data, vehicles, updateVehicle, updateSettings, resetAll, resetEmpty } = useCarData()
+  const { data, vehicles, updateVehicle, updateSettings, resetAll, resetEmpty, reload } = useCarData()
   const { session, signOut, updatePassword } = useAuth()
   const { showToast } = useToast()
   const { vehicle, settings } = data
   const [confirmReset, setConfirmReset] = useState<'demo' | 'empty' | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
+  const [migrating, setMigrating] = useState<MigrationProgress | null>(null)
+  const [uploadingImage, setUploadingImage] = useState<'avatar' | 'vehicle' | null>(null)
   const activeNavPaths = settings.mobileNavItems ?? ['/', '/timeline', '/trips']
 
   function toggleNavItem(path: string) {
@@ -58,16 +54,50 @@ export default function Settings() {
 
   async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const dataUrl = await readFileAsDataUrl(file)
-    updateSettings({ avatarUrl: dataUrl })
+    if (!file || !session?.user.id) return
+    setUploadingImage('avatar')
+    try {
+      const { path } = await uploadMedia(session.user.id, file, 'avatar')
+      void updateSettings({ avatarUrl: path })
+    } catch (error) {
+      showToast(describeDbError(error, 'Upload failed'), 'error')
+    } finally {
+      setUploadingImage(null)
+    }
   }
 
   async function onPickCarPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const dataUrl = await readFileAsDataUrl(file)
-    updateVehicle({ imageUrl: dataUrl })
+    if (!file || !session?.user.id) return
+    setUploadingImage('vehicle')
+    try {
+      const { path } = await uploadMedia(session.user.id, file, 'vehicle')
+      void updateVehicle({ imageUrl: path })
+    } catch (error) {
+      showToast(describeDbError(error, 'Upload failed'), 'error')
+    } finally {
+      setUploadingImage(null)
+    }
+  }
+
+  async function onMigrateMedia() {
+    if (!session?.user.id) return
+    try {
+      const result = await migrateMedia(session.user.id, setMigrating)
+      if (result.migrated === 0 && result.failed === 0) {
+        showToast('Nothing left to move — media is already in storage', 'info')
+      } else if (result.failed > 0) {
+        showToast(`Moved ${result.migrated}, ${result.failed} failed`, 'error')
+      } else {
+        showToast(`Moved ${result.migrated} file${result.migrated === 1 ? '' : 's'} to storage`)
+      }
+      // Refresh so the rows now resolve through signed URLs.
+      if (result.migrated > 0) await reload()
+    } catch (error) {
+      showToast(describeDbError(error, 'Migration failed'), 'error')
+    } finally {
+      setMigrating(null)
+    }
   }
 
   async function onChangePassword() {
@@ -101,6 +131,11 @@ export default function Settings() {
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
               <Camera size={16} className="text-white" />
             </div>
+            {uploadingImage === 'avatar' && (
+              <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] text-white text-center py-0.5">
+                Uploading…
+              </span>
+            )}
             <input type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
           </label>
           <div className="flex-1">
@@ -117,7 +152,9 @@ export default function Settings() {
           <img src={vehicle.imageUrl} alt={vehicle.model} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
             <Camera size={16} className="text-white" />
-            <span className="text-xs text-white">Change photo</span>
+            <span className="text-xs text-white">
+              {uploadingImage === 'vehicle' ? 'Uploading…' : 'Change photo'}
+            </span>
           </div>
           <input type="file" accept="image/*" className="hidden" onChange={onPickCarPhoto} />
         </label>
@@ -322,6 +359,21 @@ export default function Settings() {
           </div>
           <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
         </Link>
+      </Card>
+
+      <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-200 mb-1">Media storage</h3>
+        <p className="text-xs text-gray-500 mb-4">
+          Photos, documents and profile images now live in Supabase Storage instead of
+          being saved as text inside the database. Older accounts still carry some
+          embedded files — this moves them across once. Safe to run again any time.
+        </p>
+        <Button variant="secondary" onClick={onMigrateMedia} disabled={!!migrating}>
+          <CloudUpload size={14} />
+          {migrating
+            ? `Moving ${migrating.done}/${migrating.total} — ${migrating.label}`
+            : 'Migrate media to storage'}
+        </Button>
       </Card>
 
       <Card>

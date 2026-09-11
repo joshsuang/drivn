@@ -7,12 +7,14 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { CockpitSidebar } from '@/components/cockpit/CockpitSidebar'
 import { CockpitTopBar } from '@/components/cockpit/CockpitTopBar'
 import { MobileNav } from '@/components/layout/MobileNav'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { PullToRefresh } from '@/components/PullToRefresh'
 import { VehiclePicker } from '@/pages/VehiclePicker'
 import Login from '@/pages/Login'
 import Overview from '@/pages/Overview'
 import CockpitOverview from '@/pages/CockpitOverview'
 import Timeline from '@/pages/Timeline'
+import Reminders from '@/pages/Reminders'
 import Maintenance from '@/pages/Maintenance'
 import CockpitMaintenance from '@/pages/CockpitMaintenance'
 import FuelCosts from '@/pages/FuelCosts'
@@ -50,11 +52,13 @@ function AppShell() {
       {isCockpit ? <CockpitSidebar /> : <Sidebar />}
       <div className="flex-1 min-w-0 flex flex-col">
         {isCockpit && <CockpitTopBar />}
+        <OfflineBanner />
         <main className="flex-1 min-w-0 px-4 md:px-6 lg:px-8 pt-6 md:pt-8 pb-24 md:pb-10 max-w-[1440px] w-full">
           <PullToRefresh>
             <Routes>
               <Route path="/" element={<OverviewComponent />} />
               <Route path="/timeline" element={<Timeline />} />
+              <Route path="/reminders" element={<Reminders />} />
               <Route path="/maintenance" element={<MaintenanceComponent />} />
               <Route path="/fuel" element={<FuelComponent />} />
               <Route path="/statistics" element={<Statistics />} />
