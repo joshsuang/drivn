@@ -216,6 +216,7 @@ export function buildFuelEntryDetail(data: CarData, entryId: string): FuelEntryD
 export function buildMaintenanceEntryDetail(
   data: CarData,
   entryId: string,
+  today: Date = new Date(),
 ): MaintenanceEntryDetail | null {
   const entry = data.maintenance.find((m) => m.id === entryId)
   if (!entry) return null
@@ -281,7 +282,7 @@ export function buildMaintenanceEntryDetail(
     entry.nextIntervalKm !== undefined
       ? entry.nextIntervalKm - data.vehicle.currentMileage
       : undefined
-  const dueInDays = entry.nextIntervalDate ? daysUntil(entry.nextIntervalDate) : undefined
+  const dueInDays = entry.nextIntervalDate ? daysUntil(entry.nextIntervalDate, today) : undefined
   const hasInterval = dueInKm !== undefined || dueInDays !== undefined
 
   const lifetimeCost = data.maintenance.reduce((sum, m) => sum + m.cost, 0)

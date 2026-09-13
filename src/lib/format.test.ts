@@ -36,8 +36,12 @@ describe('date formatting', () => {
   it('renders a date-only string as the same calendar day everywhere', () => {
     // "2026-09-11" is UTC midnight; in a negative-offset timezone that is the
     // 10th locally, and this used to display as such.
-    expect(formatDate('2026-09-11')).toBe('11 Sep 2026')
-    expect(formatDateShort('2026-09-11')).toBe('11 Sep')
+    // "2026-09-11" is UTC midnight; in a negative-offset timezone that is the
+    // 10th locally, and this used to display as such. The month is matched
+    // loosely because CLDR spells September "Sept" in en-GB on newer ICU
+    // builds and "Sep" on older ones — the day is what this test guards.
+    expect(formatDate('2026-09-11')).toMatch(/^11 Sept? 2026$/)
+    expect(formatDateShort('2026-09-11')).toMatch(/^11 Sept?$/)
   })
 
   it('handles the first of the month, where an off-by-one is most visible', () => {

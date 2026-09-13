@@ -72,7 +72,10 @@ export function daysBetween(dateStr: string, to: Date = new Date()): number {
 
 /** Days until `dateStr`; negative once it has passed, 0 on the day itself. */
 export function daysUntil(dateStr: string, today: Date = new Date()): number {
-  return -daysBetween(dateStr, today)
+  const days = -daysBetween(dateStr, today)
+  // Negating a zero yields -0, which isn't equal to 0 under Object.is and would
+  // make "due today" compare as neither positive nor negative. Normalise it.
+  return days === 0 ? 0 : days
 }
 
 export function uid(prefix = 'id'): string {

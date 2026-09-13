@@ -19,6 +19,33 @@
   </head>
   <body class="bg-base-950">
     <div id="root"></div>
+    <script>
+      // A crash before React mounts (missing env vars, a failed chunk fetch)
+      // used to leave nothing but a black screen. Show it instead. Plain JS so
+      // it works even when the bundle itself is what failed.
+      window.addEventListener('error', function (e) {
+        var root = document.getElementById('root')
+        if (!root || root.childElementCount > 0) return
+        var message = 'Unknown startup error'
+        if (e && e.error && e.error.message) {
+          message = e.error.message
+        } else if (e && e.target && e.target !== window && e.target.src) {
+          var parts = e.target.src.split('/')
+          message = 'Failed to load ' + parts[parts.length - 1]
+        } else if (e && e.message) {
+          message = e.message
+        }
+        root.innerHTML =
+          '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0d0f12;color:#e8e9ee;font-family:Inter,system-ui,sans-serif">' +
+          '<div style="max-width:26rem;width:100%;background:#14171c;border:1px solid rgba(255,255,255,.08);border-radius:1rem;padding:24px;text-align:center">' +
+          '<h1 style="font-size:.875rem;font-weight:600;margin:0 0 4px">Drivn couldn&rsquo;t start</h1>' +
+          '<p style="font-size:.75rem;color:#9aa1ad;margin:0 0 16px;word-break:break-word">' +
+          String(message).replace(/[<>&"]+/g, '') +
+          '</p>' +
+          '<button onclick="location.reload()" style="font-size:.875rem;font-weight:500;background:#4f8cff;color:#fff;border:0;border-radius:.75rem;padding:.625rem 1rem;cursor:pointer">Reload</button>' +
+          '</div></div>'
+      }, true)
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

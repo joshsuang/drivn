@@ -111,7 +111,8 @@ describe('buildFuelEntryDetail', () => {
     })
     const detail = buildFuelEntryDetail(data, 'b')!
     expect(detail.context.ownEventId).toBe('e2')
-    expect(detail.context.events.map((e) => e.id)).toEqual(['e1', 'e2', 'e3'])
+    // Newest first, matching how the Timeline page renders.
+    expect(detail.context.events.map((e) => e.id)).toEqual(['e3', 'e2', 'e1'])
   })
 
   it('falls back to the date when the entry has no linked event', () => {
@@ -125,7 +126,7 @@ describe('buildFuelEntryDetail', () => {
     const detail = buildFuelEntryDetail(data, 'b')!
     expect(detail.context.ownEventId).toBeUndefined()
     // Nothing on 2026-06-01, so it shows what was happening around then.
-    expect(detail.context.events.map((e) => e.id)).toEqual(['e1', 'e3'])
+    expect(detail.context.events.map((e) => e.id)).toEqual(['e3', 'e1'])
   })
 })
 
@@ -142,14 +143,20 @@ describe('buildTimelineContext', () => {
     const linked = events.map((e) => (e.id === 'e3' ? { ...e, sourceId: 'x' } : e))
     const context = buildTimelineContext(linked, { id: 'x', date: '2026-03-01', type: 'maintenance' })
     expect(context.ownEventId).toBe('e3')
-    expect(context.events.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5'])
+    // Newest first; e3 sits in the middle of five, so the full window fits.
+    expect(context.events.map((e) => e.id)).toEqual(['e5', 'e4', 'e3', 'e2', 'e1'])
   })
 
-  it('does not run off the end of the list', () => {
-    const linked = events.map((e) => (e.id === 'e1' ? { ...e, sourceId: 'x' } : e))
-    const context = buildTimelineContext(linked, { id: 'x', date: '2026-01-01', type: 'maintenance' })
-    // e1 sorted by date descending is last, so the window is clipped.
-    expect(context.events.map((e) => e.id)).toEqual(['e2', 'e1'])
+  it('clips the window at both ends of the log', () => {
+    // Newest event first: the window reaches backwards past the top.
+    const newest = events.map((e) => (e.id === 'e5' ? { ...e, sourceId: 'x' } : e))
+    const atTop = buildTimelineContext(newest, { id: 'x', date: '2026-05-01', type: 'maintenance' })
+    expect(atTop.events.map((e) => e.id)).toEqual(['e5', 'e4', 'e3'])
+
+    // Oldest event last: the window reaches forwards past the bottom.
+    const oldest = events.map((e) => (e.id === 'e1' ? { ...e, sourceId: 'x' } : e))
+    const atBottom = buildTimelineContext(oldest, { id: 'x', date: '2026-01-01', type: 'maintenance' })
+    expect(atBottom.events.map((e) => e.id)).toEqual(['e3', 'e2', 'e1'])
   })
 
   it('handles an empty timeline', () => {
@@ -182,7 +189,8 @@ describe('buildMaintenanceEntryDetail', () => {
   })
 
   it('reuses the reminder thresholds for the next interval', () => {
-    const detail = buildMaintenanceEntryDetail(twoServices(), 'm2')!
+    // Fixed clock: dueInDays must not drift as real time passes.
+    const detail = buildMaintenanceEntryDetail(twoServices(), 'm2', new Date('2026-09-11'))!
     expect(detail.interval?.dueInKm).toBe(2338)
     expect(detail.interval?.dueInDays).toBe(-6)
     expect(detail.interval?.severity).toBe('overdue')
