@@ -21,7 +21,11 @@ VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon public key>
 ```
 
-`.env*` files are gitignored — set these as host environment variables when you deploy. The anon key is public by design, but that only holds because every table enforces row level security; see below.
+`.env` is the only file you need locally, and it is read in every mode — dev, build and preview. `.env*` files are gitignored, so a build that runs anywhere else (your host, CI) has no config at all unless you provide it there.
+
+These are **build-time** values: Vite inlines them into the bundle, so changing them needs a fresh build, not just a restart. Because a build without them produces an app that throws on the first line, `npm run build` runs `scripts/check-env.mjs` first and refuses to continue, naming what's missing. That turns a silent blank page into a failed deploy whose log states the fix. Set `SKIP_ENV_CHECK=1` to override.
+
+The anon key is public by design, but that only holds because every table enforces row level security; see below.
 
 ### Database
 
@@ -78,6 +82,17 @@ On mobile, the sidebar becomes a bottom tab bar with a center "+" button that op
 - Chart series are derived from local state (`src/lib/analytics.ts`), so an edit updates the charts immediately without refetching.
 - The edit/delete actions and the offline queue share one code path: a change applied while offline is queued with an optimistic description, and that description is replayed over fetched state so unsynced work stays visible after a reload.
 
-## Next step: deploying
+## Deploying
 
-Not deployed yet — say the word when you're ready and I'll set it up on Vercel (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables).
+Any static host works: the build output in `dist/` is self-contained, and routing uses hash URLs, so no rewrite rules or SPA fallback config are needed.
+
+**Set both variables in the host's project settings before the first deploy.** They are not in the repo, so a host that builds from Git has no config unless you add it:
+
+| Variable | Value |
+| --- | --- |
+| `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | your anon / publishable key |
+
+A build without them now fails with the variable names in the deploy log, rather than shipping a page that says *Drivn couldn't start*.
+
+If a broken build has already been served, hard-refresh once. The service worker caches the app shell, so it will keep serving the previous deploy until it sees a new one.

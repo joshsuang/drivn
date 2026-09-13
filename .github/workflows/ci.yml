@@ -27,3 +27,9 @@ jobs:
 
       - name: Production build
         run: npm run build
+        env:
+          # Placeholders: CI only proves the build compiles and the env guard
+          # passes when values are supplied. Real values belong in the hosting
+          # provider's environment variables, never in the repo.
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder
